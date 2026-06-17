@@ -14,15 +14,15 @@ const sortedPosts = allPosts.sort(
 <BaseLayout title="文章" description="AI Agent 领域的学习文章合集">
   <Header slot="header" />
 
-  <div class="mx-auto max-w-5xl px-6 py-12">
-    <header class="mb-10">
-      <h1 class="font-display text-3xl font-bold">全部文章</h1>
-      <p class="mt-2 text-[var(--color-muted)]">
-        共 {sortedPosts.length} 篇文章
+  <div class="mx-auto max-w-6xl px-6 py-16 md:py-20">
+    <header class="mb-12 max-w-2xl">
+      <h1 class="font-display text-4xl font-normal tracking-tight md:text-5xl">文章</h1>
+      <p class="mt-4 text-lg leading-relaxed text-[var(--color-muted)]">
+        AI Agent 领域的学习笔记与思考，共 {sortedPosts.length} 篇。
       </p>
     </header>
 
-    <div class="grid gap-5 md:grid-cols-2">
+    <div class="grid gap-6 md:grid-cols-2">
       {sortedPosts.map((post) => <PostCard post={post} />)}
     </div>
   </div>
