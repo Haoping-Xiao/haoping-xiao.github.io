@@ -1,0 +1,48 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<BaseLayout title="关于" description="关于 Agent Notes 博客">
+  <Header slot="header" />
+
+  <div class="mx-auto max-w-3xl px-6 py-12">
+    <h1 class="font-display mb-8 text-3xl font-bold">关于本站</h1>
+
+    <div class="prose space-y-6">
+      <p>
+        欢迎来到 <strong>Agent Notes</strong>——一个专注于 AI Agent 领域的个人学习博客。
+      </p>
+
+      <h2>为什么写这个博客？</h2>
+      <p>
+        AI Agent 是当下最令人兴奋的 AI 方向之一。从简单的 ReAct 循环到复杂的多智能体系统，这个领域正在快速演进。我希望通过写作来梳理自己的学习路径，同时也为同样在探索这个领域的同学提供一些参考。
+      </p>
+
+      <h2>我会写什么？</h2>
+      <ul>
+        <li><strong>基础概念</strong>：ReAct、Chain-of-Thought、Tool Use 等核心范式</li>
+        <li><strong>架构设计</strong>：记忆系统、规划模块、多智能体协作</li>
+        <li><strong>工程实践</strong>：框架选型、调试技巧、评估方法</li>
+        <li><strong>前沿探索</strong>：论文阅读笔记、开源项目分析</li>
+      </ul>
+
+      <h2>技术栈</h2>
+      <p>
+        本站使用 <a href="https://astro.build" target="_blank" rel="noopener noreferrer">Astro</a> 构建，文章以 Markdown/MDX 格式编写，通过 GitHub Pages 部署。你可以在
+        <a href="https://github.com/haoping-xiao/haoping-xiao.github.io" target="_blank" rel="noopener noreferrer">GitHub</a>
+        上查看源码。
+      </p>
+
+      <h2>联系我</h2>
+      <p>
+        欢迎通过
+        <a href="https://github.com/haoping-xiao" target="_blank" rel="noopener noreferrer">GitHub</a>
+        与我交流讨论。
+      </p>
+    </div>
+  </div>
+
+  <Footer slot="footer" />
+</BaseLayout>

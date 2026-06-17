@@ -1,0 +1,85 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import PostCard from '../components/PostCard.astro';
+
+const allPosts = await getCollection('blog', ({ data }) => !data.draft);
+const sortedPosts = allPosts.sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+const latestPosts = sortedPosts.slice(0, 3);
+const allTags = [...new Set(sortedPosts.flatMap((p) => p.data.tags))];
+---
+
+<BaseLayout title="Agent Notes" description="记录 AI Agent 领域的学习心得与探索思考">
+  <Header slot="header" />
+
+  <section class="grid-bg relative overflow-hidden border-b border-[var(--color-border)]">
+    <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-[var(--color-accent)]/5 to-transparent"></div>
+    <div class="relative mx-auto max-w-5xl px-6 py-20 md:py-28">
+      <p class="mb-4 text-sm font-medium tracking-widest text-[var(--color-accent)] uppercase">
+        AI Agent 学习笔记
+      </p>
+      <h1 class="font-display max-w-2xl text-4xl font-bold leading-tight md:text-5xl">
+        探索智能体的<br />
+        <span class="text-[var(--color-accent)]">边界与可能</span>
+      </h1>
+      <p class="mt-6 max-w-xl text-lg leading-relaxed text-[var(--color-muted)]">
+        在这里记录我在 AI Agent 领域的学习心得——从 ReAct 到 Tool Use，从多智能体协作到记忆系统，一步步构建对智能体的理解。
+      </p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a
+          href="/blog"
+          class="rounded-lg bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--color-bg)] transition hover:bg-[var(--color-accent-dim)]"
+        >
+          阅读文章
+        </a>
+        <a
+          href="/about"
+          class="rounded-lg border border-[var(--color-border)] px-5 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)]/50 hover:bg-[var(--color-surface)]"
+        >
+          了解更多
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-5xl px-6 py-16">
+    <div class="mb-8 flex items-end justify-between">
+      <div>
+        <h2 class="font-display text-2xl font-semibold">最新文章</h2>
+        <p class="mt-1 text-sm text-[var(--color-muted)]">最近的学习记录</p>
+      </div>
+      <a href="/blog" class="text-sm text-[var(--color-accent)] transition hover:text-[var(--color-warm)]">
+        查看全部 →
+      </a>
+    </div>
+    <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+      {latestPosts.map((post) => <PostCard post={post} />)}
+    </div>
+  </section>
+
+  {
+    allTags.length > 0 && (
+      <section class="border-t border-[var(--color-border)] bg-[var(--color-surface)]/30">
+        <div class="mx-auto max-w-5xl px-6 py-12">
+          <h2 class="font-display mb-4 text-lg font-semibold">探索主题</h2>
+          <div class="flex flex-wrap gap-2">
+            {allTags.map((tag) => (
+              <a
+                href={`/tags/${tag}`}
+                class="rounded-full border border-[var(--color-border)] px-4 py-1.5 text-sm text-[var(--color-muted)] transition hover:border-[var(--color-accent)]/50 hover:text-[var(--color-accent)]"
+              >
+                #{tag}
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <Footer slot="footer" />
+</BaseLayout>

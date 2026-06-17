@@ -1,0 +1,115 @@
+---
+title: "多智能体协作：从单打独斗到团队作战"
+description: "探索多 Agent 系统的架构模式，包括角色分工、通信机制和协作策略。"
+pubDate: 2025-06-15
+updatedDate: 2025-06-16
+tags: ["架构设计", "Multi-Agent", "Agent"]
+---
+
+## 什么时候需要多 Agent？
+
+单个 Agent 在处理复杂任务时会遇到瓶颈：
+
+- **上下文窗口限制**：任务太复杂，一个 Agent 记不住所有信息
+- **能力边界**：不同子任务需要不同的专业知识和工具
+- **可靠性**：单点失败风险，缺乏交叉验证
+
+多 Agent 系统通过**分工协作**来解决这些问题。
+
+## 经典架构模式
+
+### 1. 主管-工人模式（Supervisor）
+
+```
+         ┌─────────────┐
+         │  Supervisor │
+         └──────┬──────┘
+       ┌────────┼────────┐
+       ▼        ▼        ▼
+   Researcher  Coder   Reviewer
+```
+
+Supervisor 负责理解任务、拆解子任务、分配给专业 Agent，并汇总结果。这是 LangGraph 和 CrewAI 中最常见的模式。
+
+### 2. 流水线模式（Pipeline）
+
+```
+Input → Agent A → Agent B → Agent C → Output
+```
+
+每个 Agent 处理流程中的一个阶段，输出作为下一个 Agent 的输入。适合有明确处理步骤的任务，如「调研 → 写作 → 润色」。
+
+### 3. 辩论模式（Debate）
+
+```
+    Agent A ←→ Agent B
+         ↘   ↙
+       Moderator
+```
+
+多个 Agent 从不同角度分析问题，通过辩论达成共识。适合需要多角度思考的决策类任务。
+
+## 通信机制
+
+Agent 之间的通信方式直接影响系统的设计：
+
+| 方式 | 描述 | 优缺点 |
+|------|------|--------|
+| 共享状态 | 通过公共数据结构传递信息 | 简单，但容易产生冲突 |
+| 消息传递 | Agent 之间直接发送消息 | 灵活，但调试困难 |
+| 黑板系统 | 写入/读取公共黑板 | 解耦好，适合异步协作 |
+
+## 实战：构建一个研究团队
+
+以 AutoGen 为例，一个简单研究团队可能包含：
+
+```python
+# 研究员：负责信息搜集和分析
+researcher = AssistantAgent(
+    name="researcher",
+    system_message="你是一个研究员，负责搜集和分析信息。",
+    llm_config=llm_config,
+)
+
+# 工程师：负责编写代码
+engineer = AssistantAgent(
+    name="engineer",
+    system_message="你是一个工程师，负责编写和调试代码。",
+    llm_config=llm_config,
+)
+
+# 用户代理：代表人类用户
+user_proxy = UserProxyAgent(
+    name="user",
+    human_input_mode="TERMINATE",
+    code_execution_config={"work_dir": "coding"},
+)
+
+# 启动协作
+user_proxy.initiate_chat(
+    manager,
+    message="请分析 MNIST 数据集的分类准确率",
+)
+```
+
+## 关键挑战
+
+1. **协调开销**：Agent 之间的通信本身消耗 token 和时间
+2. **错误传播**：一个 Agent 的错误可能级联影响整个团队
+3. **终止条件**：如何判断任务已完成？何时停止协作？
+4. **成本控制**：多个 Agent 同时运行，API 费用成倍增长
+
+## 设计原则
+
+> 不要过早引入多 Agent。先用单个 Agent + 好的工具设计解决问题，确实遇到瓶颈时再拆分。
+
+- **最小团队原则**：能用 2 个 Agent 解决的，不要用 5 个
+- **明确边界**：每个 Agent 的职责和权限要清晰定义
+- **可观测性**：记录 Agent 间的完整交互日志
+- **优雅降级**：某个 Agent 失败时，系统仍能提供部分结果
+
+## 下一步
+
+- 动手实现一个 Supervisor 模式的 Agent 团队
+- 了解 LangGraph 的状态图编排能力
+- 阅读 AutoGen 和 CrewAI 的源码，学习工程实践
