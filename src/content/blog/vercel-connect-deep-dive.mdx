@@ -158,6 +158,40 @@ flowchart LR
 
 目前 Trigger 仅支持 Slack、GitHub、Linear（beta）。
 
+## 横向对比：Cursor Cloud Agent 也解这个问题
+
+Cursor Cloud Agent 面对同样的挑战——给一个 AI agent 安全地提供凭证——但选了一条不同的路。
+
+Cursor 的密钥分两层：
+
+- **Build secret**（构建阶段）：只在环境镜像构建时注入，安装依赖、拉取私有包用。构建结束后**不进入运行时环境**，agent 看不到。
+- **Runtime secret**（运行阶段）：存储在 Cursor Dashboard → Environments → Secrets，以 **env var** 形式注入 agent 启动时的环境，agent 代码可以直接 `process.env.MY_TOKEN` 读取。
+
+```mermaid
+flowchart LR
+    subgraph Cursor Cloud Agent
+        B["Build secret\n仅构建阶段可见"] 
+        R["Runtime secret\n→ env var → agent 代码可读"]
+    end
+    subgraph Vercel Connect
+        L["长期凭证\n存在 Vercel Connect 内部"] -->|OIDC 换取| T["短命 token\n→ getToken() → 代码可读"]
+    end
+```
+
+两种模型的根本差异在于**代码能看到什么**：
+
+| 维度 | Cursor Runtime Secret | Vercel Connect |
+|------|----------------------|----------------|
+| 代码能读到的凭证 | 完整的长期 secret（API Key / Token） | 短命 access token（几十分钟） |
+| 长期凭证存在哪 | Cursor Secrets UI → 注入为 env var | Vercel Connect 内部，代码不可达 |
+| 身份模型 | 静态预配置，agent 直接继承 | OIDC 运行时证明「我是哪个项目」 |
+| 凭证泄露影响 | 泄露 = 长期有效，需手动轮换 | 泄露 = 几十分钟后自动失效 |
+| 轮换 | 手动，或借助 1Password / Infisical | 自动，refresh token 由 Vercel 管理 |
+
+Cursor 的 build/runtime 拆分是一个进步——至少构建阶段的凭证不会泄给 agent——但 runtime secret 本质上还是「把长期密钥打包成 env var 给代码用」。正因如此，社区出现了 1Password、Infisical 等"just-in-time 注入"方案：把实际密钥存在外部 secrets manager，agent 启动时只用一个短命 machine identity 去拉取，近似复刻 Vercel Connect 的思路——但这需要额外集成，Vercel Connect 把它做成了平台原语。
+
+> **一句话总结差异**：Cursor 的模型是「把密钥安全地送到 agent 手里」；Vercel Connect 的模型是「让 agent 永远拿不到密钥，只能换取当次操作的凭证」。
+
 ## 与传统做法的对比
 
 | 维度 | 传统 .env 密钥 | Vercel Connect |
