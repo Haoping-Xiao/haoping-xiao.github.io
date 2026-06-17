@@ -162,6 +162,53 @@ const postsData = posts.map((post) => ({
   const pagination = document.getElementById('pagination');
 
   let currentPage = 1;
+  let searchMatchIds = null;
+  let searchDebounceTimer;
+  let pagefindModule = null;
+  let pagefindReady = false;
+
+  function postIdFromUrl(url) {
+    const path = url.startsWith('http') ? new URL(url).pathname : url;
+    const match = path.match(/\/blog\/([^/]+)\/?$/);
+    return match ? match[1] : null;
+  }
+
+  async function ensurePagefind() {
+    if (pagefindReady) return pagefindModule;
+    try {
+      pagefindModule = await import('/pagefind/pagefind.js');
+      await pagefindModule.options({});
+      pagefindReady = true;
+      return pagefindModule;
+    } catch {
+      return null;
+    }
+  }
+
+  async function resolveSearchIds(query) {
+    if (!query) return null;
+
+    const pagefind = await ensurePagefind();
+    if (!pagefind) {
+      const lowerQuery = query.toLowerCase();
+      return new Set(
+        postsData
+          .filter((post) => `${post.title} ${post.description}`.toLowerCase().includes(lowerQuery))
+          .map((post) => post.id)
+      );
+    }
+
+    const response = await pagefind.search(query);
+    const details = await Promise.all(response.results.map((result) => result.data()));
+    const ids = new Set();
+
+    for (const data of details) {
+      const id = postIdFromUrl(data.url);
+      if (id) ids.add(id);
+    }
+
+    return ids;
+  }
 
   function getSelectedFilters(name) {
     return Array.from(explorer.querySelectorAll(`input[name="${name}"]:checked`)).map(
@@ -170,16 +217,12 @@ const postsData = posts.map((post) => ({
   }
 
   function getFilteredPosts() {
-    const query = searchInput.value.trim().toLowerCase();
     const sort = sortSelect.value;
     const techDomains = getSelectedFilters('techDomain');
     const products = getSelectedFilters('product');
 
     let filtered = postsData.filter((post) => {
-      if (query) {
-        const haystack = `${post.title} ${post.description}`.toLowerCase();
-        if (!haystack.includes(query)) return false;
-      }
+      if (searchMatchIds !== null && !searchMatchIds.has(post.id)) return false;
       if (techDomains.length > 0) {
         if (!techDomains.some((d) => post.techDomain.includes(d))) return false;
       }
@@ -276,7 +319,13 @@ const postsData = posts.map((post) => ({
 
   searchInput.addEventListener('input', () => {
     currentPage = 1;
-    updateView();
+    clearTimeout(searchDebounceTimer);
+    const query = searchInput.value.trim();
+
+    searchDebounceTimer = setTimeout(async () => {
+      searchMatchIds = await resolveSearchIds(query);
+      updateView();
+    }, 250);
   });
   sortSelect.addEventListener('change', () => {
     currentPage = 1;
