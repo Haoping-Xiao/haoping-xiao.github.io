@@ -152,3 +152,7 @@ body {
 .prose th {
   background: var(--color-surface);
 }
+
+#blog-explorer details:not([open]) > :not(summary) {
+  display: none;
+}
