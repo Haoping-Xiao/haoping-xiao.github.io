@@ -1,5 +1,5 @@
 ---
-/** 博客页全局 Mermaid 渲染脚本，只加载一次。 */
+/** 博客页 Mermaid 渲染脚本 */
 ---
 
 <script>
@@ -7,9 +7,13 @@
 
   let initialized = false;
 
-  function getMermaidTheme() {
-    return {
-      theme: 'base' as const,
+  function ensureMermaid() {
+    if (initialized) return;
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      fontFamily: '"Noto Sans SC", "Source Sans 3", sans-serif',
+      theme: 'base',
       themeVariables: {
         primaryColor: '#f5f4ed',
         primaryTextColor: '#141413',
@@ -26,16 +30,6 @@
         signalColor: '#141413',
         signalTextColor: '#141413',
       },
-    };
-  }
-
-  function ensureMermaid() {
-    if (initialized) return;
-    mermaid.initialize({
-      startOnLoad: false,
-      securityLevel: 'strict',
-      fontFamily: '"Noto Sans SC", "Source Sans 3", sans-serif',
-      ...getMermaidTheme(),
     });
     initialized = true;
   }
@@ -59,10 +53,8 @@
 
     ensureMermaid();
 
-    const renderId = `${root.dataset.diagramId}-svg`;
-
     try {
-      const { svg } = await mermaid.render(renderId, code);
+      const { svg } = await mermaid.render(`${root.dataset.diagramId}-svg`, code);
       loading?.remove();
       const wrapper = document.createElement('div');
       wrapper.className = 'text-diagram__svg';
@@ -75,40 +67,12 @@
     }
   }
 
-  function initTextDiagram(root: HTMLElement) {
-    if (root.dataset.initialized === 'true') return;
-    root.dataset.initialized = 'true';
-
-    const viewSelect = root.querySelector<HTMLSelectElement>('[data-view-mode]');
-    const content = root.querySelector<HTMLElement>('.text-diagram__content');
-    const fullscreenBtn = root.querySelector<HTMLButtonElement>('[data-fullscreen]');
-
-    viewSelect?.addEventListener('change', () => {
-      if (!content || !viewSelect) return;
-      content.dataset.view = viewSelect.value;
-    });
-
-    fullscreenBtn?.addEventListener('click', async () => {
-      try {
-        if (document.fullscreenElement === root) {
-          await document.exitFullscreen();
-        } else {
-          await root.requestFullscreen();
-        }
-      } catch {
-        /* ignore unsupported fullscreen */
-      }
-    });
-
-    document.addEventListener('fullscreenchange', () => {
-      root.classList.toggle('text-diagram--fullscreen-active', document.fullscreenElement === root);
-    });
-
-    void renderDiagram(root);
-  }
-
   function initAll() {
-    document.querySelectorAll<HTMLElement>('[data-text-diagram]').forEach(initTextDiagram);
+    document.querySelectorAll<HTMLElement>('[data-text-diagram]').forEach((root) => {
+      if (root.dataset.initialized === 'true') return;
+      root.dataset.initialized = 'true';
+      void renderDiagram(root);
+    });
   }
 
   initAll();
