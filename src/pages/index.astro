@@ -4,6 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import PostCard from '../components/PostCard.astro';
+import ContactLinks from '../components/ContactLinks.astro';
 
 const allPosts = await getCollection('blog', ({ data }) => !data.draft);
 const sortedPosts = allPosts.sort(
@@ -19,23 +20,25 @@ const allTags = [...new Set(sortedPosts.flatMap((p) => p.data.tags))];
   <section class="border-b border-[var(--color-border-subtle)]">
     <div class="mx-auto max-w-6xl px-6 py-20 md:py-28">
       <h1 class="font-display max-w-3xl text-4xl font-normal leading-[1.15] tracking-tight md:text-5xl lg:text-[3.25rem]">
-        探索智能体的边界与可能
+        你好，我是 Haoping
       </h1>
-      <p class="mt-6 max-w-2xl text-lg leading-relaxed text-[var(--color-muted)]">
-        在这里记录我在 AI Agent 领域的学习心得——从 ReAct 到 Tool Use，从多智能体协作到记忆系统，一步步构建对智能体的理解。
-      </p>
-      <div class="mt-10 flex flex-wrap gap-3">
+      <div class="mt-6 max-w-2xl space-y-4 text-lg leading-relaxed text-[var(--color-muted)]">
+        <p>
+          目前在华为从事 AI Agent 方向的工作。AI 领域日新月异，新想法、新方法层出不穷，我对其中很多方向都充满好奇。
+        </p>
+        <p>
+          这个博客是我记录学习、思考与实践总结的地方。把零散的想法写下来，往往能看到之前没注意到的连接。
+        </p>
+      </div>
+      <div class="mt-8">
+        <ContactLinks variant="prominent" />
+      </div>
+      <div class="mt-10">
         <a
           href="/blog"
-          class="rounded-xl bg-[var(--color-text)] px-6 py-3 text-sm font-medium text-[var(--color-bg)] transition hover:bg-[var(--color-dark-surface)]"
+          class="inline-flex rounded-xl bg-[var(--color-text)] px-6 py-3 text-sm font-medium text-[var(--color-bg)] transition hover:bg-[var(--color-dark-surface)]"
         >
           阅读文章
-        </a>
-        <a
-          href="/about"
-          class="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-elevated)]"
-        >
-          了解更多
         </a>
       </div>
     </div>
