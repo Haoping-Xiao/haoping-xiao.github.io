@@ -1,0 +1,285 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import PostCard from './PostCard.astro';
+
+interface Props {
+  posts: CollectionEntry<'blog'>[];
+  postsPerPage?: number;
+}
+
+const { posts, postsPerPage = 10 } = Astro.props;
+
+const TECH_DOMAINS = ['记忆', '自进化'];
+const PRODUCTS = ['claude design'];
+
+const postsData = posts.map((post) => ({
+  id: post.id,
+  title: post.data.title,
+  description: post.data.description,
+  pubDate: post.data.pubDate.toISOString(),
+  tags: post.data.tags,
+  techDomain: post.data.techDomain ?? [],
+  product: post.data.product ?? [],
+}));
+---
+
+<section class="mx-auto max-w-6xl px-6 py-12 md:py-16" id="blog-explorer">
+  <div class="flex flex-col gap-8 lg:flex-row lg:gap-12">
+    <!-- Sidebar: Filter & Sort -->
+    <aside class="w-full shrink-0 lg:w-52">
+      <h2 class="mb-5 text-xs font-medium uppercase tracking-widest text-[var(--color-muted)]">
+        筛选与排序
+      </h2>
+
+      <div class="space-y-6">
+        <div>
+          <label for="sort-select" class="mb-2 block text-sm font-medium text-[var(--color-text)]">
+            排序方式
+          </label>
+          <select
+            id="sort-select"
+            class="w-full appearance-none rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg)] px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition focus:border-[var(--color-border)]"
+          >
+            <option value="newest">最新发布</option>
+            <option value="alphabetical">字母排序</option>
+          </select>
+        </div>
+
+        <details class="group" open>
+          <summary class="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-[var(--color-text)] [&::-webkit-details-marker]:hidden">
+            技术领域
+            <svg class="h-4 w-4 text-[var(--color-muted)] transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div class="mt-3 space-y-2.5">
+            {
+              TECH_DOMAINS.map((domain) => (
+                <label class="flex cursor-pointer items-center gap-2.5 text-sm text-[var(--color-muted)] transition hover:text-[var(--color-text)]">
+                  <input
+                    type="checkbox"
+                    name="techDomain"
+                    value={domain}
+                    class="h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-accent)]"
+                  />
+                  {domain}
+                </label>
+              ))
+            }
+          </div>
+        </details>
+
+        <details class="group" open>
+          <summary class="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-[var(--color-text)] [&::-webkit-details-marker]:hidden">
+            Product
+            <svg class="h-4 w-4 text-[var(--color-muted)] transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div class="mt-3 space-y-2.5">
+            {
+              PRODUCTS.map((item) => (
+                <label class="flex cursor-pointer items-center gap-2.5 text-sm text-[var(--color-muted)] transition hover:text-[var(--color-text)]">
+                  <input
+                    type="checkbox"
+                    name="product"
+                    value={item}
+                    class="h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-accent)]"
+                  />
+                  {item}
+                </label>
+              ))
+            }
+          </div>
+        </details>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <div class="min-w-0 flex-1">
+      <div class="relative mb-8">
+        <svg
+          class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="search"
+          id="search-input"
+          placeholder="搜索文章"
+          class="w-full rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-bg)] py-3 pl-11 pr-4 text-sm text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-muted-light)] focus:border-[var(--color-border)]"
+        />
+      </div>
+
+      <div id="post-list" class="flex flex-col gap-4">
+        {
+          posts.map((post) => (
+            <div
+              class="post-item"
+              data-id={post.id}
+              data-title={post.data.title}
+              data-description={post.data.description}
+              data-pubdate={post.data.pubDate.toISOString()}
+              data-tech-domain={post.data.techDomain?.join(',') ?? ''}
+              data-product={post.data.product?.join(',') ?? ''}
+            >
+              <PostCard post={post} variant="list" />
+            </div>
+          ))
+        }
+      </div>
+
+      <p id="empty-state" class="hidden py-16 text-center text-sm text-[var(--color-muted)]">
+        没有找到匹配的文章
+      </p>
+
+      <nav id="pagination" class="mt-10 flex items-center justify-center gap-2" aria-label="分页导航">
+      </nav>
+    </div>
+  </div>
+</section>
+
+<script define:vars={{ postsData, postsPerPage }}>
+  const explorer = document.getElementById('blog-explorer');
+  if (!explorer) throw new Error('Blog explorer not found');
+
+  const searchInput = document.getElementById('search-input');
+  const sortSelect = document.getElementById('sort-select');
+  const postList = document.getElementById('post-list');
+  const emptyState = document.getElementById('empty-state');
+  const pagination = document.getElementById('pagination');
+
+  let currentPage = 1;
+
+  function getSelectedFilters(name) {
+    return Array.from(explorer.querySelectorAll(`input[name="${name}"]:checked`)).map(
+      (el) => el.value
+    );
+  }
+
+  function getFilteredPosts() {
+    const query = searchInput.value.trim().toLowerCase();
+    const sort = sortSelect.value;
+    const techDomains = getSelectedFilters('techDomain');
+    const products = getSelectedFilters('product');
+
+    let filtered = postsData.filter((post) => {
+      if (query) {
+        const haystack = `${post.title} ${post.description}`.toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      if (techDomains.length > 0) {
+        if (!techDomains.some((d) => post.techDomain.includes(d))) return false;
+      }
+      if (products.length > 0) {
+        if (!products.some((p) => post.product.includes(p))) return false;
+      }
+      return true;
+    });
+
+    if (sort === 'newest') {
+      filtered.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+    } else {
+      filtered.sort((a, b) => a.title.localeCompare(b.title, 'zh-CN'));
+    }
+
+    return filtered;
+  }
+
+  function renderPagination(totalPages) {
+    pagination.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '上一页';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.className =
+      'rounded-lg border border-[var(--color-border-subtle)] px-3 py-1.5 text-sm text-[var(--color-muted)] transition hover:border-[var(--color-border)] hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-40';
+    prevBtn.addEventListener('click', () => {
+      currentPage--;
+      updateView();
+    });
+    pagination.appendChild(prevBtn);
+
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.textContent = String(i);
+      btn.className =
+        i === currentPage
+          ? 'rounded-lg bg-[var(--color-text)] px-3 py-1.5 text-sm text-[var(--color-bg)]'
+          : 'rounded-lg border border-[var(--color-border-subtle)] px-3 py-1.5 text-sm text-[var(--color-muted)] transition hover:border-[var(--color-border)] hover:text-[var(--color-text)]';
+      btn.addEventListener('click', () => {
+        currentPage = i;
+        updateView();
+      });
+      pagination.appendChild(btn);
+    }
+
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '下一页';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.className =
+      'rounded-lg border border-[var(--color-border-subtle)] px-3 py-1.5 text-sm text-[var(--color-muted)] transition hover:border-[var(--color-border)] hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-40';
+    nextBtn.addEventListener('click', () => {
+      currentPage++;
+      updateView();
+    });
+    pagination.appendChild(nextBtn);
+  }
+
+  function updateView() {
+    const filtered = getFilteredPosts();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / postsPerPage));
+
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const start = (currentPage - 1) * postsPerPage;
+    const pageIds = new Set(filtered.slice(start, start + postsPerPage).map((p) => p.id));
+    const filteredIds = new Set(filtered.map((p) => p.id));
+
+    const itemMap = new Map();
+    postList.querySelectorAll('.post-item').forEach((item) => {
+      itemMap.set(item.dataset.id, item);
+    });
+
+    filtered.forEach((post) => {
+      const item = itemMap.get(post.id);
+      if (item) postList.appendChild(item);
+    });
+
+    itemMap.forEach((item, id) => {
+      if (!filteredIds.has(id)) {
+        item.classList.add('hidden');
+      } else {
+        item.classList.toggle('hidden', !pageIds.has(id));
+      }
+    });
+
+    const hasResults = filtered.length > 0;
+    emptyState.classList.toggle('hidden', hasResults);
+    postList.classList.toggle('hidden', !hasResults);
+
+    renderPagination(totalPages);
+  }
+
+  searchInput.addEventListener('input', () => {
+    currentPage = 1;
+    updateView();
+  });
+  sortSelect.addEventListener('change', () => {
+    currentPage = 1;
+    updateView();
+  });
+  explorer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+    cb.addEventListener('change', () => {
+      currentPage = 1;
+      updateView();
+    });
+  });
+
+  updateView();
+</script>
