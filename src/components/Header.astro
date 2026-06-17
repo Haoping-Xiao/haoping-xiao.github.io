@@ -1,0 +1,46 @@
+---
+const navItems = [
+  { href: '/', label: '首页' },
+  { href: '/blog', label: '文章' },
+  { href: '/about', label: '关于' },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<header class="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)]/80 backdrop-blur-xl">
+  <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+    <a href="/" class="group flex items-center gap-2.5">
+      <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-accent)]/10 text-sm font-bold text-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/30 transition group-hover:bg-[var(--color-accent)]/20">
+        A
+      </span>
+      <span class="font-display text-lg font-semibold tracking-tight">
+        Agent Notes
+      </span>
+    </a>
+
+    <nav class="flex items-center gap-1">
+      {
+        navItems.map((item) => {
+          const isActive =
+            item.href === '/'
+              ? currentPath === '/'
+              : currentPath.startsWith(item.href);
+          return (
+            <a
+              href={item.href}
+              class:list={[
+                'rounded-lg px-3.5 py-2 text-sm font-medium transition',
+                isActive
+                  ? 'bg-[var(--color-surface)] text-[var(--color-accent)]'
+                  : 'text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]',
+              ]}
+            >
+              {item.label}
+            </a>
+          );
+        })
+      }
+    </nav>
+  </div>
+</header>
