@@ -1,0 +1,116 @@
+---
+/** 博客页全局 Mermaid 渲染脚本，只加载一次。 */
+---
+
+<script>
+  import mermaid from 'mermaid';
+
+  let initialized = false;
+
+  function getMermaidTheme() {
+    return {
+      theme: 'base' as const,
+      themeVariables: {
+        primaryColor: '#f5f4ed',
+        primaryTextColor: '#141413',
+        primaryBorderColor: '#d1cfc5',
+        lineColor: '#d97757',
+        secondaryColor: '#faf9f5',
+        tertiaryColor: '#f0eee6',
+        fontFamily: '"Noto Sans SC", "Source Sans 3", sans-serif',
+        noteBkgColor: '#f0eee6',
+        noteTextColor: '#87867f',
+        actorBkg: '#faf9f5',
+        actorBorder: '#d1cfc5',
+        actorTextColor: '#141413',
+        signalColor: '#141413',
+        signalTextColor: '#141413',
+      },
+    };
+  }
+
+  function ensureMermaid() {
+    if (initialized) return;
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      fontFamily: '"Noto Sans SC", "Source Sans 3", sans-serif',
+      ...getMermaidTheme(),
+    });
+    initialized = true;
+  }
+
+  function decodeBase64Utf8(encoded: string) {
+    const binary = atob(encoded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  async function renderDiagram(root: HTMLElement) {
+    const preview = root.querySelector<HTMLElement>('[data-diagram-preview]');
+    const loading = root.querySelector<HTMLElement>('[data-diagram-loading]');
+    if (!preview || root.dataset.rendered === 'true') return;
+
+    const encoded = preview.dataset.diagramSource;
+    if (!encoded) return;
+
+    const code = decodeBase64Utf8(encoded).trim();
+    if (!code) return;
+
+    ensureMermaid();
+
+    const renderId = `${root.dataset.diagramId}-svg`;
+
+    try {
+      const { svg } = await mermaid.render(renderId, code);
+      loading?.remove();
+      const wrapper = document.createElement('div');
+      wrapper.className = 'text-diagram__svg';
+      wrapper.innerHTML = svg;
+      preview.appendChild(wrapper);
+      root.dataset.rendered = 'true';
+    } catch (error) {
+      if (loading) loading.textContent = '图表渲染失败';
+      console.error('Mermaid render failed:', error);
+    }
+  }
+
+  function initTextDiagram(root: HTMLElement) {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+
+    const viewSelect = root.querySelector<HTMLSelectElement>('[data-view-mode]');
+    const content = root.querySelector<HTMLElement>('.text-diagram__content');
+    const fullscreenBtn = root.querySelector<HTMLButtonElement>('[data-fullscreen]');
+
+    viewSelect?.addEventListener('change', () => {
+      if (!content || !viewSelect) return;
+      content.dataset.view = viewSelect.value;
+    });
+
+    fullscreenBtn?.addEventListener('click', async () => {
+      try {
+        if (document.fullscreenElement === root) {
+          await document.exitFullscreen();
+        } else {
+          await root.requestFullscreen();
+        }
+      } catch {
+        /* ignore unsupported fullscreen */
+      }
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+      root.classList.toggle('text-diagram--fullscreen-active', document.fullscreenElement === root);
+    });
+
+    void renderDiagram(root);
+  }
+
+  function initAll() {
+    document.querySelectorAll<HTMLElement>('[data-text-diagram]').forEach(initTextDiagram);
+  }
+
+  initAll();
+  document.addEventListener('astro:page-load', initAll);
+</script>

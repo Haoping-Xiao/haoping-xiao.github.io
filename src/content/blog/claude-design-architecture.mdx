@@ -13,15 +13,16 @@ Claude Design 的答案不是「让模型写标准网页」，而是搭了一条
 
 ## 一张图看懂全局
 
-```
-用户对话                    Claude                    Canvas（iframe 沙箱）
-   │                          │                              │
-   │  Skill.md 约束格式        │                              │
-   ├─────────────────────────►│  流式生成 Artifact 代码       │
-   │                          ├─────────────────────────────►│
-   │                          │         postMessage          │  dc-runtime / deck-stage
-   │                          │◄─────────────────────────────┤  解析 DSL → DOM API → 像素
-   │                          │                              │
+```mermaid
+sequenceDiagram
+    participant U as 用户对话
+    participant C as Claude
+    participant I as Canvas（iframe 沙箱）
+
+    U->>C: Skill.md 约束格式
+    C->>I: 流式生成 Artifact 代码
+    I-->>C: postMessage
+    Note right of I: dc-runtime / deck-stage<br/>解析 DSL → DOM API → 像素
 ```
 
 四个角色各司其职：**Skill 是契约**，**Claude 是生产者**，**渲染脚本是消费者**，**iframe 是隔离边界**。下面按这个顺序展开。
@@ -100,8 +101,12 @@ Claude Design 支持导入现有代码或 Figma 的 `.fig` 文件，系统会提
 2. dc-runtime 通过 `dcUpdate()` 接收增量
 3. 引擎**局部更新**已挂载的组件树，而不是整页 `innerHTML` 重写
 
-```
-token 流 ──► 缓冲片段 ──► dcUpdate() ──► 差量 patch DOM ──► 用户看到渐进式成品
+```mermaid
+flowchart LR
+    A[token 流] --> B[缓冲片段]
+    B --> C[dcUpdate()]
+    C --> D[差量 patch DOM]
+    D --> E[用户看到渐进式成品]
 ```
 
 全量重绘在流式场景下既慢又闪屏；局部更新把「生成体验」和「最终一致性」绑在一起。代价是引擎必须能处理**不完整输入**——DSL 解析器要能容忍中间态，并在下一段到达时修正，这比一次性渲染难一个数量级。

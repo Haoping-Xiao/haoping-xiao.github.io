@@ -15,10 +15,12 @@
     "@astrojs/mdx": "^6.0.3",
     "@tailwindcss/vite": "^4.3.1",
     "astro": "^6.4.7",
+    "mermaid": "^11.15.0",
     "tailwindcss": "^4.3.1"
   },
   "devDependencies": {
     "astro-pagefind": "^2.0.0",
-    "pagefind": "^1.5.2"
+    "pagefind": "^1.5.2",
+    "unist-util-visit": "^5.1.0"
   }
 }
