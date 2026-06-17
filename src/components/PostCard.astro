@@ -3,41 +3,70 @@ import type { CollectionEntry } from 'astro:content';
 
 interface Props {
   post: CollectionEntry<'blog'>;
+  variant?: 'grid' | 'list';
 }
 
-const { post } = Astro.props;
+const { post, variant = 'grid' } = Astro.props;
 const { title, description, pubDate, tags } = post.data;
 const formattedDate = pubDate.toLocaleDateString('zh-CN', {
   year: 'numeric',
   month: 'long',
   day: 'numeric',
 });
+const isList = variant === 'list';
 ---
 
-<article class="group rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg)] p-6 transition hover:border-[var(--color-border)]">
-  <a href={`/blog/${post.id}`} class="flex h-full flex-col gap-4">
-    <time class="text-sm text-[var(--color-muted)]">
-      {formattedDate}
-    </time>
-    <h2 class="font-display text-xl font-medium leading-snug tracking-tight transition group-hover:text-[var(--color-accent)]">
-      {title}
-    </h2>
-    <p class="line-clamp-2 flex-1 text-sm leading-relaxed text-[var(--color-muted)]">
-      {description}
-    </p>
-    {
-      tags.length > 0 && (
-        <div class="flex flex-wrap gap-2 pt-1">
-          {tags.map((tag) => (
-            <span class="rounded-full bg-[var(--color-surface)] px-3 py-1 text-xs text-[var(--color-muted)]">
-              {tag}
-            </span>
-          ))}
-        </div>
-      )
-    }
-    <span class="text-sm font-medium text-[var(--color-accent)] transition group-hover:text-[var(--color-accent-hover)]">
-      阅读全文 →
-    </span>
+<article
+  class:list={[
+    'group rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg)] transition hover:border-[var(--color-border)]',
+    isList ? 'p-6' : 'p-6',
+  ]}
+>
+  <a
+    href={`/blog/${post.id}`}
+    class:list={[
+      'flex h-full gap-4',
+      isList ? 'flex-row items-start' : 'flex-col',
+    ]}
+  >
+    <div class:list={['flex min-w-0 flex-1 flex-col gap-3', isList && 'gap-2']}>
+      <time class="text-sm text-[var(--color-muted)]">
+        {formattedDate}
+      </time>
+      <h2
+        class:list={[
+          'font-display font-medium leading-snug tracking-tight transition group-hover:text-[var(--color-accent)]',
+          isList ? 'text-xl' : 'text-xl',
+        ]}
+      >
+        {title}
+      </h2>
+      <p
+        class:list={[
+          'text-sm leading-relaxed text-[var(--color-muted)]',
+          isList ? 'line-clamp-2' : 'line-clamp-2 flex-1',
+        ]}
+      >
+        {description}
+      </p>
+      {
+        tags.length > 0 && (
+          <div class="flex flex-wrap gap-2 pt-1">
+            {tags.map((tag) => (
+              <span class="rounded-full bg-[var(--color-surface)] px-3 py-1 text-xs text-[var(--color-muted)]">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )
+      }
+      {
+        !isList && (
+          <span class="text-sm font-medium text-[var(--color-accent)] transition group-hover:text-[var(--color-accent-hover)]">
+            阅读全文 →
+          </span>
+        )
+      }
+    </div>
   </a>
 </article>
