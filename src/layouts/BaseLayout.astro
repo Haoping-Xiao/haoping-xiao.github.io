@@ -12,7 +12,7 @@ const { title, description } = Astro.props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content={description ?? '记录 AI Agent 领域的学习心得与探索思考'} />
+    <meta name="description" content={description ?? 'Haoping 的个人博客——记录 AI 领域的学习、思考与实践'} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,7 +20,7 @@ const { title, description } = Astro.props;
       href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@400;500;600&family=Source+Sans+3:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap"
       rel="stylesheet"
     />
-    <title>{title} | Agent Notes</title>
+    <title>{title} | Haoping's Blog</title>
   </head>
   <body class="min-h-screen flex flex-col">
     <slot name="header" />

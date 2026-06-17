@@ -1,4 +1,7 @@
 ---
+import LogoMark from './LogoMark.astro';
+import ContactLinks from './ContactLinks.astro';
+
 const navItems = [
   { href: '/', label: '首页' },
   { href: '/blog', label: '文章' },
@@ -9,35 +12,39 @@ const currentPath = Astro.url.pathname;
 ---
 
 <header class="sticky top-0 z-50 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg)]/90 backdrop-blur-md">
-  <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-    <a href="/" class="group flex items-center gap-3">
+  <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
+    <a href="/" class="group flex shrink-0 items-center gap-3">
+      <LogoMark size={28} class="transition group-hover:opacity-80" />
       <span class="font-display text-xl font-medium tracking-tight text-[var(--color-text)] transition group-hover:text-[var(--color-accent)]">
-        Agent Notes
+        Haoping's Blog
       </span>
     </a>
 
-    <nav class="flex items-center gap-1">
-      {
-        navItems.map((item) => {
-          const isActive =
-            item.href === '/'
-              ? currentPath === '/'
-              : currentPath.startsWith(item.href);
-          return (
-            <a
-              href={item.href}
-              class:list={[
-                'rounded-md px-3.5 py-2 text-sm font-medium transition',
-                isActive
-                  ? 'text-[var(--color-accent)]'
-                  : 'text-[var(--color-muted)] hover:text-[var(--color-text)]',
-              ]}
-            >
-              {item.label}
-            </a>
-          );
-        })
-      }
-    </nav>
+    <div class="flex items-center gap-2 sm:gap-4">
+      <ContactLinks />
+      <nav class="flex items-center gap-1">
+        {
+          navItems.map((item) => {
+            const isActive =
+              item.href === '/'
+                ? currentPath === '/'
+                : currentPath.startsWith(item.href);
+            return (
+              <a
+                href={item.href}
+                class:list={[
+                  'rounded-md px-3.5 py-2 text-sm font-medium transition',
+                  isActive
+                    ? 'text-[var(--color-accent)]'
+                    : 'text-[var(--color-muted)] hover:text-[var(--color-text)]',
+                ]}
+              >
+                {item.label}
+              </a>
+            );
+          })
+        }
+      </nav>
+    </div>
   </div>
 </header>
