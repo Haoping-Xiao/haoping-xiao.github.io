@@ -1,0 +1,73 @@
+---
+import DiagramFrame from './DiagramFrame.astro';
+---
+
+<DiagramFrame>
+  <svg viewBox="0 0 720 88" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="流式渲染管线：token 流经缓冲片段、dcUpdate、差量 patch DOM 至用户看到渐进式成品">
+    <defs>
+      <marker id="flow-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+        <path d="M1 1L7 4L1 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      </marker>
+    </defs>
+
+    <g class="flow-node" transform="translate(8, 20)">
+      <rect width="96" height="48" rx="8" />
+      <text x="48" y="30">token 流</text>
+    </g>
+
+    <line x1="112" y1="44" x2="138" y2="44" class="flow-line" marker-end="url(#flow-arrow)" />
+
+    <g class="flow-node" transform="translate(144, 20)">
+      <rect width="112" height="48" rx="8" />
+      <text x="56" y="30">缓冲片段</text>
+    </g>
+
+    <line x1="264" y1="44" x2="290" y2="44" class="flow-line" marker-end="url(#flow-arrow)" />
+
+    <g class="flow-node flow-node--mono" transform="translate(296, 20)">
+      <rect width="112" height="48" rx="8" />
+      <text x="56" y="30">dcUpdate()</text>
+    </g>
+
+    <line x1="416" y1="44" x2="442" y2="44" class="flow-line" marker-end="url(#flow-arrow)" />
+
+    <g class="flow-node" transform="translate(448, 20)">
+      <rect width="128" height="48" rx="8" />
+      <text x="64" y="30">差量 patch DOM</text>
+    </g>
+
+    <line x1="584" y1="44" x2="610" y2="44" class="flow-line" marker-end="url(#flow-arrow)" />
+
+    <g class="flow-node" transform="translate(608, 20)">
+      <rect width="104" height="48" rx="8" />
+      <text x="52" y="26">用户看到</text>
+      <text x="52" y="42">渐进式成品</text>
+    </g>
+  </svg>
+</DiagramFrame>
+
+<style>
+  .flow-node rect {
+    fill: var(--color-bg);
+    stroke: var(--color-border);
+    stroke-width: 1.25;
+  }
+
+  .flow-node text {
+    fill: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    text-anchor: middle;
+  }
+
+  .flow-node--mono text {
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .flow-line {
+    stroke: var(--color-accent);
+    stroke-width: 1.75;
+  }
+</style>

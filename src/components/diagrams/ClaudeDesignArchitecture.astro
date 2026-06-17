@@ -1,0 +1,103 @@
+---
+import DiagramFrame from './DiagramFrame.astro';
+---
+
+<DiagramFrame>
+  <svg viewBox="0 0 720 300" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Claude Design 架构时序图：用户对话经 Skill.md 约束后由 Claude 流式生成 Artifact 代码至 Canvas iframe，Canvas 通过 postMessage 与 dc-runtime 解析渲染">
+    <defs>
+      <marker id="arrow-right" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+        <path d="M1 1L7 4L1 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      </marker>
+      <marker id="arrow-left" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto">
+        <path d="M7 1L1 4L7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      </marker>
+    </defs>
+
+    <!-- participant boxes -->
+    <rect x="24" y="16" width="132" height="40" rx="8" class="participant-box" />
+    <text x="90" y="42" class="participant-label">用户对话</text>
+
+    <rect x="294" y="16" width="132" height="40" rx="8" class="participant-box" />
+    <text x="360" y="42" class="participant-label">Claude</text>
+
+    <rect x="564" y="16" width="132" height="40" rx="8" class="participant-box" />
+    <text x="630" y="42" class="participant-label">Canvas</text>
+    <text x="630" y="58" class="participant-sublabel">iframe 沙箱</text>
+
+    <!-- lifelines -->
+    <line x1="90" y1="56" x2="90" y2="276" class="lifeline" />
+    <line x1="360" y1="56" x2="360" y2="276" class="lifeline" />
+    <line x1="630" y1="72" x2="630" y2="276" class="lifeline" />
+
+    <!-- message 1: user -> claude -->
+    <line x1="90" y1="96" x2="348" y2="96" class="message-line" marker-end="url(#arrow-right)" />
+    <text x="219" y="88" class="message-label">Skill.md 约束格式</text>
+
+    <!-- message 2: claude -> canvas -->
+    <line x1="372" y1="136" x2="618" y2="136" class="message-line" marker-end="url(#arrow-right)" />
+    <text x="495" y="128" class="message-label">流式生成 Artifact 代码</text>
+
+    <!-- message 3: canvas -> claude -->
+    <line x1="618" y1="196" x2="372" y2="196" class="message-line message-line--return" marker-end="url(#arrow-left)" />
+    <text x="495" y="184" class="message-label">postMessage</text>
+    <text x="630" y="220" class="note-label">dc-runtime / deck-stage</text>
+    <text x="630" y="238" class="note-label">解析 DSL → DOM API → 像素</text>
+  </svg>
+</DiagramFrame>
+
+<style>
+  :global(.diagram-frame svg) {
+    color: var(--color-text);
+  }
+
+  .participant-box {
+    fill: var(--color-bg);
+    stroke: var(--color-border);
+    stroke-width: 1.25;
+  }
+
+  .participant-label {
+    fill: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 500;
+    text-anchor: middle;
+  }
+
+  .participant-sublabel {
+    fill: var(--color-muted);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-anchor: middle;
+  }
+
+  .lifeline {
+    stroke: var(--color-border);
+    stroke-width: 1.25;
+    stroke-dasharray: 5 5;
+  }
+
+  .message-line {
+    stroke: var(--color-accent);
+    stroke-width: 1.75;
+  }
+
+  .message-line--return {
+    stroke: var(--color-muted);
+    stroke-dasharray: 6 4;
+  }
+
+  .message-label {
+    fill: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    text-anchor: middle;
+  }
+
+  .note-label {
+    fill: var(--color-muted);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    text-anchor: middle;
+  }
+</style>
