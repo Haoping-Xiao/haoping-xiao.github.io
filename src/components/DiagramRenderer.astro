@@ -67,11 +67,17 @@
     }
   }
 
+  let renderChain = Promise.resolve();
+
+  function queueRender(root: HTMLElement) {
+    renderChain = renderChain.then(() => renderDiagram(root));
+  }
+
   function initAll() {
     document.querySelectorAll<HTMLElement>('[data-text-diagram]').forEach((root) => {
       if (root.dataset.initialized === 'true') return;
       root.dataset.initialized = 'true';
-      void renderDiagram(root);
+      queueRender(root);
     });
   }
 
