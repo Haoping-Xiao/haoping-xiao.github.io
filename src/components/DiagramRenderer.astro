@@ -2,6 +2,26 @@
 /** 博客页 Mermaid 渲染脚本 */
 ---
 
+<div class="diagram-lightbox" data-diagram-lightbox hidden>
+  <div class="diagram-lightbox__backdrop" data-diagram-lightbox-backdrop></div>
+  <div
+    class="diagram-lightbox__panel"
+    role="dialog"
+    aria-modal="true"
+    aria-label="图表放大查看"
+  >
+    <button
+      type="button"
+      class="diagram-lightbox__close"
+      data-diagram-lightbox-close
+      aria-label="关闭"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+    <div class="diagram-lightbox__content" data-diagram-lightbox-content></div>
+  </div>
+</div>
+
 <script>
   import mermaid from 'mermaid';
 
@@ -40,6 +60,46 @@
     return new TextDecoder().decode(bytes);
   }
 
+  const lightbox = document.querySelector<HTMLElement>('[data-diagram-lightbox]');
+  const lightboxContent = document.querySelector<HTMLElement>('[data-diagram-lightbox-content]');
+  const lightboxBackdrop = document.querySelector<HTMLElement>('[data-diagram-lightbox-backdrop]');
+  const lightboxClose = document.querySelector<HTMLElement>('[data-diagram-lightbox-close]');
+
+  function openLightbox(svg: SVGSVGElement) {
+    if (!lightbox || !lightboxContent) return;
+
+    lightboxContent.innerHTML = '';
+    lightboxContent.appendChild(svg.cloneNode(true));
+    lightbox.hidden = false;
+    document.body.style.overflow = 'hidden';
+    lightboxClose?.focus();
+  }
+
+  function closeLightbox() {
+    if (!lightbox || !lightboxContent) return;
+
+    lightbox.hidden = true;
+    lightboxContent.innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  lightboxBackdrop?.addEventListener('click', closeLightbox);
+  lightboxClose?.addEventListener('click', closeLightbox);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && lightbox && !lightbox.hidden) {
+      closeLightbox();
+    }
+  });
+
+  function bindExpandButton(root: HTMLElement) {
+    const expandBtn = root.querySelector<HTMLButtonElement>('[data-diagram-expand]');
+    const svg = root.querySelector<SVGSVGElement>('.text-diagram__svg svg');
+    if (!expandBtn || !svg) return;
+
+    expandBtn.hidden = false;
+    expandBtn.addEventListener('click', () => openLightbox(svg));
+  }
+
   async function renderDiagram(root: HTMLElement) {
     const preview = root.querySelector<HTMLElement>('[data-diagram-preview]');
     const loading = root.querySelector<HTMLElement>('[data-diagram-loading]');
@@ -61,6 +121,7 @@
       wrapper.innerHTML = svg;
       preview.appendChild(wrapper);
       root.dataset.rendered = 'true';
+      bindExpandButton(root);
     } catch (error) {
       if (loading) loading.textContent = '图表渲染失败';
       console.error('Mermaid render failed:', error);
