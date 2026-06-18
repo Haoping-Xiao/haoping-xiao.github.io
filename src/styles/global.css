@@ -321,6 +321,18 @@ body {
   gap: 0.125rem;
 }
 
+.article-toc__item--top {
+  --indent: 0;
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.article-toc__link--top .article-toc__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
 .article-toc__item {
   --indent: calc(var(--depth) * 0.625rem);
 }
