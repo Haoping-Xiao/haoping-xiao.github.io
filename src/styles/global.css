@@ -303,7 +303,7 @@ body {
 }
 
 
-/* Back-to-top: fixed on mobile, sticky-aligned in TOC column on desktop */
+/* Back-to-top: fixed bottom-right on all breakpoints */
 .back-to-top-btn {
   position: fixed;
   bottom: 1.5rem;
@@ -348,21 +348,6 @@ body {
 .back-to-top-btn:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
   outline-offset: 2px;
-}
-
-@media (min-width: 1280px) {
-  .back-to-top-btn {
-    position: sticky;
-    bottom: 1.5rem;
-    align-self: flex-end;
-    margin-top: 0.75rem;
-    box-shadow: none;
-    transform: none;
-  }
-
-  .back-to-top-btn.is-visible {
-    transform: none;
-  }
 }
 
 .article-toc__kicker {
