@@ -303,11 +303,15 @@ body {
 }
 
 
-/* Back-to-top: fixed bottom-right on all breakpoints */
+/* Back-to-top: fixed near bottom; horizontal position tuned via CSS vars */
 .back-to-top-btn {
+  --back-to-top-bottom: 1.5rem;
+  --back-to-top-left: auto;
+  --back-to-top-right: 1.5rem;
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  bottom: var(--back-to-top-bottom);
+  left: var(--back-to-top-left);
+  right: var(--back-to-top-right);
   z-index: 50;
   display: flex;
   align-items: center;
@@ -326,6 +330,9 @@ body {
   transition:
     opacity 200ms ease,
     transform 200ms ease,
+    bottom 200ms ease,
+    left 200ms ease,
+    right 200ms ease,
     background-color 150ms ease,
     border-color 150ms ease,
     color 150ms ease,
@@ -511,7 +518,8 @@ body {
   .article-toc__marker,
   .article-toc__label,
   .article-toc__link,
-  .article-toc__back-btn {
+  .article-toc__back-btn,
+  .back-to-top-btn {
     transition: none;
   }
 }
