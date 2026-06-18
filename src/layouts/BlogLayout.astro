@@ -42,10 +42,9 @@ const formattedUpdated = updatedDate?.toLocaleDateString('zh-CN', {
       <span data-pagefind-filter="product" class="sr-only">{item}</span>
     ))
   }
-  <ArticleToc headings={headings} />
-  <article class="mx-auto max-w-3xl px-6 py-14 md:py-16">
+  <div class="article-shell">
     <header
-      class="mb-12 space-y-5 border-b border-[var(--color-border-subtle)] pb-10"
+      class="article-shell__header"
       data-pagefind-ignore
     >
       <a
@@ -56,16 +55,16 @@ const formattedUpdated = updatedDate?.toLocaleDateString('zh-CN', {
         返回文章列表
       </a>
       <h1
-        class="font-display text-3xl font-normal leading-[1.2] tracking-tight md:text-4xl lg:text-[2.75rem]"
+        class="mt-5 font-display text-3xl font-normal leading-[1.2] tracking-tight md:text-4xl lg:text-[2.75rem]"
         data-pagefind-meta="title"
       >
         {title}
       </h1>
-      <p class="text-sm text-[var(--color-muted)]">{readingTime}</p>
-      <p class="text-lg leading-relaxed text-[var(--color-muted)]" data-pagefind-meta="description">
+      <p class="mt-5 text-sm text-[var(--color-muted)]">{readingTime}</p>
+      <p class="mt-5 text-lg leading-relaxed text-[var(--color-muted)]" data-pagefind-meta="description">
         {description}
       </p>
-      <div class="flex flex-wrap items-center gap-4 text-sm text-[var(--color-muted)]">
+      <div class="mt-5 flex flex-wrap items-center gap-4 text-sm text-[var(--color-muted)]">
         <time datetime={pubDate.toISOString()}>{formattedDate}</time>
         {
           formattedUpdated && (
@@ -75,7 +74,7 @@ const formattedUpdated = updatedDate?.toLocaleDateString('zh-CN', {
       </div>
       {
         hasLabels && (
-          <div class="flex flex-wrap gap-2">
+          <div class="mt-5 flex flex-wrap gap-2">
             {techDomain.map((domain) => (
               <span class="rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-muted)]">
                 {domain}
@@ -90,10 +89,11 @@ const formattedUpdated = updatedDate?.toLocaleDateString('zh-CN', {
         )
       }
     </header>
-    <div class="prose" data-pagefind-body>
+    <ArticleToc headings={headings} />
+    <div class="article-shell__body prose" data-pagefind-body>
       <Content />
     </div>
-  </article>
+  </div>
   <Footer slot="footer" />
   <DiagramRenderer />
 </BaseLayout>
