@@ -22,9 +22,8 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
             <span>返回标题</span>
           </a>
-          <div class="article-toc__rail">
-            <p class="article-toc__kicker">On this page</p>
-            <ol class="article-toc__list">
+          <p class="article-toc__kicker">On this page</p>
+          <ol class="article-toc__list">
             {
               tocHeadings.map((heading) => (
                 <li
@@ -38,8 +37,7 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
                 </li>
               ))
             }
-            </ol>
-          </div>
+          </ol>
         </div>
       </details>
     </nav>

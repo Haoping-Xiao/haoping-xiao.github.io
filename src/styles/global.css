@@ -255,9 +255,6 @@ body {
 }
 
 .article-toc {
-  --toc-rail-inset: 0.625rem;
-  --toc-rail-width: 2px;
-  --toc-marker-size: 0.4375rem;
   grid-column: 2;
   grid-row: 2;
   margin: 0 1.5rem 2rem;
@@ -314,7 +311,6 @@ body {
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.4;
-  letter-spacing: 0.02em;
   color: var(--color-text);
   text-decoration: none;
   background: var(--color-surface);
@@ -322,10 +318,8 @@ body {
   border-radius: 0.75rem;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-0.25rem);
   transition:
     opacity 180ms ease,
-    transform 180ms ease,
     background-color 150ms ease,
     border-color 150ms ease,
     color 150ms ease;
@@ -334,7 +328,6 @@ body {
 .article-toc__back-btn.is-visible {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0);
 }
 
 .article-toc__back-btn:hover {
@@ -348,23 +341,9 @@ body {
   outline-offset: 2px;
 }
 
-@media (max-width: 1279px) {
-  .article-toc__back-btn {
-    background: var(--color-bg);
-  }
-
-  .article-toc__back-btn:hover {
-    background: var(--color-surface-elevated);
-  }
-}
-
-.article-toc__rail {
-  border-left: var(--toc-rail-width) solid var(--color-border);
-  padding-left: var(--toc-rail-inset);
-}
-
 .article-toc__kicker {
   margin: 0 0 0.75rem;
+  padding-left: 0.125rem;
   font-size: 0.6875rem;
   font-weight: 500;
   line-height: 1.4;
@@ -376,7 +355,8 @@ body {
 .article-toc__list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0 0 0.625rem;
+  border-left: 2px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
@@ -390,8 +370,8 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
-  margin-left: calc(-1 * var(--toc-rail-inset) - var(--toc-rail-width));
-  padding: 0.3125rem 0 0.3125rem calc(var(--toc-rail-inset) + var(--indent));
+  margin-left: calc(-0.625rem - 1px);
+  padding: 0.3125rem 0 0.3125rem calc(0.625rem + var(--indent));
   text-decoration: none;
   color: var(--color-muted);
   outline: none;
@@ -401,10 +381,10 @@ body {
 
 .article-toc__marker {
   flex-shrink: 0;
-  width: var(--toc-marker-size);
-  height: var(--toc-marker-size);
+  width: 0.4375rem;
+  height: 0.4375rem;
   margin-top: 0.4375rem;
-  margin-left: calc(-0.5 * var(--toc-marker-size));
+  margin-left: -0.21875rem;
   border-radius: 9999px;
   background: var(--color-border);
   transition:
@@ -517,7 +497,7 @@ body {
   .article-toc__marker,
   .article-toc__label,
   .article-toc__link,
-  .article-toc__back {
+  .article-toc__back-btn {
     transition: none;
   }
 }
