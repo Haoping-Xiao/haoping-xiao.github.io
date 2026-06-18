@@ -123,16 +123,20 @@ body {
 
 .prose details {
   margin: 1.5em 0;
+}
+
+.prose details[open] {
   border-left: 3px solid var(--color-border);
   padding-left: 1.25rem;
 }
 
 .prose details summary {
   cursor: pointer;
-  color: var(--color-muted);
+  color: var(--color-text);
   font-weight: 400;
-  font-style: italic;
+  font-style: normal;
   list-style: none;
+  transition: color 0.15s;
 }
 
 .prose details summary::-webkit-details-marker {
@@ -140,13 +144,18 @@ body {
 }
 
 .prose details summary::before {
-  content: "▸ ";
+  content: "展开查看 ▸ ";
   font-style: normal;
-  color: var(--color-muted-light);
+  font-weight: 500;
+  color: var(--color-accent);
 }
 
 .prose details[open] summary::before {
-  content: "▾ ";
+  content: "收起 ▾ ";
+}
+
+.prose details summary:hover::before {
+  color: var(--color-accent-hover);
 }
 
 .prose details summary strong {
@@ -155,6 +164,7 @@ body {
 
 .prose details > :not(summary) {
   margin-top: 0.75em;
+  color: var(--color-muted);
 }
 
 .prose ul,
