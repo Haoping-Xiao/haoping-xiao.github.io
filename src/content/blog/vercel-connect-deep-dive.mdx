@@ -3,8 +3,8 @@ title: "Vercel Connect 原理拆解：用 OIDC 替掉长期凭证"
 description: "从 Connector → Installation → Token 三个核心原语出发，一步步拆解 Vercel Connect 如何用运行时凭证交换替代 .env 里的长期密钥，以及 OIDC 身份链在其中扮演的角色。"
 pubDate: 2026-06-17
 tags: ["产品拆解"]
-techDomain: []
-product: ["Vercel"]
+techDomain: ["Agent Infra"]
+product: ["Vercel Connect"]
 ---
 
 每个接过第三方集成的工程师都遇到过同一个问题：**密钥放哪？** Slack Bot Token、GitHub App 私钥、Snowflake 账号密码——最后大多数都落进了 `.env`，然后进了 CI/CD 的 Secrets，再被几十个人查看过，从没轮换过。
