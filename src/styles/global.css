@@ -265,6 +265,8 @@ body {
 
 .article-toc__panel {
   margin: 0;
+  border: none;
+  padding: 0;
 }
 
 .article-toc__summary {
