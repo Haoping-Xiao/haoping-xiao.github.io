@@ -11,6 +11,43 @@ product: ["Vercel"]
 
 Vercel Connect 的答案是：**不存密钥，按需换取。** 应用在运行时证明自己的身份，Vercel Connect 验证后发给你一个短命 token，用完即弃。
 
+<details>
+<summary>**前置知识：什么是 OIDC？**</summary>
+
+**OIDC = OpenID Connect**，一句话：让 A 向 B 证明「我是谁」的标准协议。
+
+你用过「用 Google 登录」吗？
+
+```
+[你的 App] → 跳转 Google → 你在 Google 登录 → Google 告诉 App「这个人是 xxx@gmail.com」
+```
+
+这整套流程就是 OIDC。Google 是**身份提供方（IdP）**，你的 App 信任 Google 的背书。
+
+Google 验证完后，会发一个 **JWT 格式的 ID Token**，里面有：
+
+```json
+{
+  "iss": "https://accounts.google.com",
+  "sub": "user_12345",
+  "aud": "your-app-client-id",
+  "exp": 1718000000
+}
+```
+
+Token 有**数字签名**，接收方可以验证它没被篡改、确实是 Google 签的。
+
+**Vercel 把同样的思路用在了机器身份上：** 每个 Vercel Function 部署会自动拿到一个 ID Token，token 里记着「哪个团队、哪个项目、哪个环境（production / preview）、哪次部署」。调 `getToken()` 时，SDK 把这个 token 出示给 Vercel Connect 做身份验证——不需要你手动配置任何密钥。
+
+| | API Key | OIDC Token |
+|---|---|---|
+| 寿命 | 永久，直到手动撤销 | 几分钟到几小时，自动过期 |
+| 携带信息 | 只是一串字符 | claims 带上下文（谁、在哪、干嘛） |
+| 泄露后 | 永久有效 | 等一会儿自动失效 |
+| 颁发方式 | 手动生成、手动分发 | 平台自动注入，不需要人操作 |
+
+</details>
+
 ## 一张图看懂全局
 
 ```mermaid
