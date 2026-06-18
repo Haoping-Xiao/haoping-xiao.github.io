@@ -7,13 +7,14 @@ interface Props {
 }
 
 const { post, variant = 'grid' } = Astro.props;
-const { title, description, pubDate, tags } = post.data;
+const { title, description, pubDate, techDomain, product } = post.data;
 const formattedDate = pubDate.toLocaleDateString('zh-CN', {
   year: 'numeric',
   month: 'long',
   day: 'numeric',
 });
 const isList = variant === 'list';
+const hasLabels = techDomain.length > 0 || product.length > 0;
 ---
 
 <article
@@ -50,11 +51,16 @@ const isList = variant === 'list';
         {description}
       </p>
       {
-        tags.length > 0 && (
+        hasLabels && (
           <div class="flex flex-wrap gap-2 pt-1">
-            {tags.map((tag) => (
+            {techDomain.map((domain) => (
               <span class="rounded-full bg-[var(--color-surface)] px-3 py-1 text-xs text-[var(--color-muted)]">
-                {tag}
+                {domain}
+              </span>
+            ))}
+            {product.map((item) => (
+              <span class="rounded-full bg-[var(--color-surface)] px-3 py-1 text-xs text-[var(--color-muted)]">
+                {item}
               </span>
             ))}
           </div>
