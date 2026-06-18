@@ -303,61 +303,74 @@ body {
   padding: 0 1rem 1rem;
 }
 
+.article-toc__back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  width: 100%;
+  margin-bottom: 0.875rem;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+  text-decoration: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0.75rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-0.25rem);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.article-toc__back-btn.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.article-toc__back-btn:hover {
+  background: var(--color-surface-elevated);
+  border-color: var(--color-border);
+  color: var(--color-accent);
+}
+
+.article-toc__back-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1279px) {
+  .article-toc__back-btn {
+    background: var(--color-bg);
+  }
+
+  .article-toc__back-btn:hover {
+    background: var(--color-surface-elevated);
+  }
+}
+
 .article-toc__rail {
   border-left: var(--toc-rail-width) solid var(--color-border);
   padding-left: var(--toc-rail-inset);
 }
 
-.article-toc__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
 .article-toc__kicker {
-  margin: 0;
+  margin: 0 0 0.75rem;
   font-size: 0.6875rem;
   font-weight: 500;
   line-height: 1.4;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-muted);
-}
-
-.article-toc__back {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  flex-shrink: 0;
-  font-size: 0.6875rem;
-  line-height: 1.4;
-  letter-spacing: 0.02em;
-  color: var(--color-muted-light);
-  text-decoration: none;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 180ms ease,
-    color 150ms ease;
-}
-
-.article-toc__back.is-visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.article-toc__back:hover,
-.article-toc__back:focus-visible {
-  color: var(--color-accent);
-}
-
-.article-toc__back:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
-  outline-offset: 2px;
-  border-radius: 0.25rem;
 }
 
 .article-toc__list {
