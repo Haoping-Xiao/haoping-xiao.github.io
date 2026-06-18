@@ -64,11 +64,6 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
 
   const BACK_TO_TOP_INSET = 24;
 
-  function isFooterCoveringButton(footer: Element): boolean {
-    const footerTop = footer.getBoundingClientRect().top;
-    return footerTop < window.innerHeight - BACK_TO_TOP_INSET;
-  }
-
   function updateBackToTopPlacement() {
     const backBtn = document.querySelector<HTMLAnchorElement>('.back-to-top-btn');
     const toc = document.querySelector('.article-toc');
@@ -96,7 +91,6 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
     const links = Array.from(toc.querySelectorAll<HTMLAnchorElement>('.article-toc__link'));
     const backBtn = document.querySelector<HTMLAnchorElement>('.back-to-top-btn');
     const articleTop = document.getElementById('article-top');
-    const footer = document.querySelector('footer');
     if (links.length === 0) return;
 
     const headingMap = new Map<string, HTMLElement>();
@@ -125,8 +119,7 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
 
       if (articleTop && backBtn) {
         const scrolledPastTop = articleTop.getBoundingClientRect().bottom < offset;
-        const footerCoversButton = footer ? isFooterCoveringButton(footer) : false;
-        backBtn.classList.toggle('is-visible', scrolledPastTop && !footerCoversButton);
+        backBtn.classList.toggle('is-visible', scrolledPastTop);
       }
 
       let current = headings[0]?.id ?? '';
