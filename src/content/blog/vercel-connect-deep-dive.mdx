@@ -124,7 +124,22 @@ flowchart LR
     B -->|未 link / 环境不对| D["报错 ClientNotLinkedToProjectError"]
 ```
 
-**为什么用 OIDC 而不是 API Key？** OIDC token 是短命的、自动轮换的、带有 claims（项目 ID、环境、部署 ID），API Key 是静态的、需要手动管理。OIDC 更难泄露，泄露了也快过期。
+**为什么用 OIDC，而不是直接用 OAuth client_id + client_secret？**
+
+「用 OAuth 机器对机器的 Client Credentials Flow 不行吗？」完全可以——问题在于 `client_secret` 本身存在哪。它必须提前分发到 Function 能读到的地方：`.env`、CI/CD Secrets、某个配置服务。这是典型的「先有鸡还是先有蛋」：为了拿凭证，你先要有一个凭证。
+
+而且静态长期凭证有三个结构性问题，和存在哪里无关：
+
+**1. 它会被复制**
+一个 `client_secret` 从生成到使用，要经过：你生成它 → 粘贴进 CI/CD → 本地 `.env` 一份 → staging 一份 → prod 一份 → 同事本地一份。每多一份就多一个泄露面，CI/CD 只保护了它那一份。
+
+**2. 它不会自动过期**
+泄露了你通常不知道。即使知道，轮换意味着找到所有用它的地方、同步更新、重新部署——麻烦到大多数团队从不主动轮换，直到出事。
+
+**3. 它没有上下文，无法细粒度授权**
+`client_secret` 被盗后可以从任何地方使用——攻击者的笔记本、他的服务器都能打你的接口。OIDC token 里带着 `environment: production`、`deployment_id: dpl_xxx`，这个签名只有 Vercel 的基础设施能生成，从外部伪造不了。
+
+OIDC workload identity 的思路是：**把「先要有一个凭证」这个前提整个消掉**。Vercel 平台在部署时自动签发身份证明，不需要预置任何密钥，泄露了也几分钟后自动失效。
 
 ## Step 3：getToken() 的调用模型
 
