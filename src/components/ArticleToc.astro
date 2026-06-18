@@ -36,10 +36,6 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
           </ol>
         </div>
       </details>
-      <a href="#article-top" class="article-toc__back-btn" aria-label="返回文章标题">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
-        <span>返回标题</span>
-      </a>
     </nav>
   )
 }
@@ -69,7 +65,7 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
     toc.dataset.tocInit = 'true';
 
     const links = Array.from(toc.querySelectorAll<HTMLAnchorElement>('.article-toc__link'));
-    const backBtn = toc.querySelector<HTMLAnchorElement>('.article-toc__back-btn');
+    const backBtn = document.querySelector<HTMLAnchorElement>('.back-to-top-btn');
     const articleTop = document.getElementById('article-top');
     if (links.length === 0) return;
 
