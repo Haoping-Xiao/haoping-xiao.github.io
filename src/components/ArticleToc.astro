@@ -62,24 +62,17 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
     }
   }
 
+  const BACK_TO_TOP_INSET = 24;
+
+  function isFooterCoveringButton(footer: Element): boolean {
+    const footerTop = footer.getBoundingClientRect().top;
+    return footerTop < window.innerHeight - BACK_TO_TOP_INSET;
+  }
+
   function updateBackToTopPlacement() {
     const backBtn = document.querySelector<HTMLAnchorElement>('.back-to-top-btn');
-    const footer = document.querySelector('footer');
     const toc = document.querySelector('.article-toc');
     if (!backBtn) return;
-
-    const inset = 24;
-    let bottom = inset;
-
-    if (footer) {
-      const footerTop = footer.getBoundingClientRect().top;
-      const overlap = window.innerHeight - footerTop;
-      if (overlap > 0) {
-        bottom = overlap + inset;
-      }
-    }
-
-    backBtn.style.setProperty('--back-to-top-bottom', `${bottom}px`);
 
     const isDesktop = window.matchMedia('(min-width: 1280px)').matches;
     if (isDesktop && toc) {
@@ -90,7 +83,7 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
     }
 
     backBtn.style.setProperty('--back-to-top-left', 'auto');
-    backBtn.style.setProperty('--back-to-top-right', `${inset}px`);
+    backBtn.style.setProperty('--back-to-top-right', `${BACK_TO_TOP_INSET}px`);
   }
 
   function initArticleToc() {
@@ -103,6 +96,7 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
     const links = Array.from(toc.querySelectorAll<HTMLAnchorElement>('.article-toc__link'));
     const backBtn = document.querySelector<HTMLAnchorElement>('.back-to-top-btn');
     const articleTop = document.getElementById('article-top');
+    const footer = document.querySelector('footer');
     if (links.length === 0) return;
 
     const headingMap = new Map<string, HTMLElement>();
@@ -130,8 +124,9 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
       updateBackToTopPlacement();
 
       if (articleTop && backBtn) {
-        const showBack = articleTop.getBoundingClientRect().bottom < offset;
-        backBtn.classList.toggle('is-visible', showBack);
+        const scrolledPastTop = articleTop.getBoundingClientRect().bottom < offset;
+        const footerCoversButton = footer ? isFooterCoveringButton(footer) : false;
+        backBtn.classList.toggle('is-visible', scrolledPastTop && !footerCoversButton);
       }
 
       let current = headings[0]?.id ?? '';
