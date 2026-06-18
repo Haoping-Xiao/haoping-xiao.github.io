@@ -1,0 +1,32 @@
+---
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+  headings: MarkdownHeading[];
+}
+
+const { headings } = Astro.props;
+const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.depth <= 6);
+---
+
+{
+  tocHeadings.length > 0 && (
+    <nav class="article-toc" aria-label="文章目录">
+      <ol class="article-toc__list">
+        {
+          tocHeadings.map((heading) => (
+            <li
+              class="article-toc__item"
+              style={`--depth: ${heading.depth - 2}`}
+            >
+              <a href={`#${heading.slug}`} class="article-toc__link">
+                <span class="article-toc__label">{heading.text}</span>
+                <span class="article-toc__line" aria-hidden="true" />
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    </nav>
+  )
+}

@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import mdx from '@astrojs/mdx';
 import pagefind from 'astro-pagefind';
+import rehypeSlug from 'rehype-slug';
 import { remarkTextDiagram } from './src/plugins/remark-text-diagram.mjs';
 
 // https://astro.build/config
@@ -15,6 +16,7 @@ export default defineConfig({
       excludeLangs: ['mermaid'],
     },
     remarkPlugins: [remarkTextDiagram],
+    rehypePlugins: [rehypeSlug],
   },
   vite: {
     plugins: [tailwindcss()],
