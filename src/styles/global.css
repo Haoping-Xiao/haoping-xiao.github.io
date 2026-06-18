@@ -302,56 +302,8 @@ body {
   padding: 0 1rem 1rem;
 }
 
-.article-toc__back-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  width: 100%;
-  margin-top: 0.875rem;
-  padding: 0.625rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1.4;
-  color: var(--color-text);
-  text-decoration: none;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 0.75rem;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 180ms ease,
-    background-color 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease;
-}
 
-.article-toc__back-btn.is-visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.article-toc__back-btn:hover {
-  background: var(--color-surface-elevated);
-  border-color: var(--color-border);
-  color: var(--color-accent);
-}
-
-.article-toc__back-btn:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
-  outline-offset: 2px;
-}
-
-@media (max-width: 1279px) {
-  .article-toc__back-btn {
-    margin-left: 1rem;
-    margin-right: 1rem;
-    margin-bottom: 1rem;
-  }
-}
-
-/* Floating back-to-top: mobile only (desktop uses the TOC sidebar button) */
+/* Back-to-top: fixed on mobile, sticky-aligned in TOC column on desktop */
 .back-to-top-btn {
   position: fixed;
   bottom: 1.5rem;
@@ -400,7 +352,16 @@ body {
 
 @media (min-width: 1280px) {
   .back-to-top-btn {
-    display: none;
+    position: sticky;
+    bottom: 1.5rem;
+    align-self: flex-end;
+    margin-top: 0.75rem;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .back-to-top-btn.is-visible {
+    transform: none;
   }
 }
 
