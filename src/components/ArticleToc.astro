@@ -20,10 +20,16 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
         <div class="article-toc__inner">
           <p class="article-toc__kicker">On this page</p>
           <ol class="article-toc__list">
+            <li class="article-toc__item article-toc__item--top is-active">
+              <a href="#article-top" class="article-toc__link article-toc__link--top">
+                <span class="article-toc__marker" aria-hidden="true" />
+                <span class="article-toc__label">返回顶部</span>
+              </a>
+            </li>
             {
-              tocHeadings.map((heading, index) => (
+              tocHeadings.map((heading) => (
                 <li
-                  class:list={['article-toc__item', { 'is-active': index === 0 }]}
+                  class="article-toc__item"
                   style={`--depth: ${heading.depth - 2}`}
                 >
                   <a href={`#${heading.slug}`} class="article-toc__link">
@@ -64,11 +70,14 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
     if (!toc || toc.dataset.tocInit === 'true') return;
     toc.dataset.tocInit = 'true';
 
-    const links = Array.from(toc.querySelectorAll<HTMLAnchorElement>('.article-toc__link'));
-    if (links.length === 0) return;
+    const sectionLinks = Array.from(
+      toc.querySelectorAll<HTMLAnchorElement>('.article-toc__link:not(.article-toc__link--top)'),
+    );
+    const topItem = toc.querySelector('.article-toc__item--top');
+    if (sectionLinks.length === 0) return;
 
     const headingMap = new Map<string, HTMLElement>();
-    for (const link of links) {
+    for (const link of sectionLinks) {
       const id = link.getAttribute('href')?.slice(1);
       if (!id) continue;
       const heading = document.getElementById(id);
@@ -78,16 +87,23 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
     const headings = Array.from(headingMap.values());
     if (headings.length === 0) return;
 
-    const setActive = (id: string) => {
-      for (const link of links) {
+    const setActive = (id: string | null) => {
+      topItem?.classList.toggle('is-active', id === null);
+      for (const link of sectionLinks) {
         const item = link.closest('.article-toc__item');
-        const isActive = link.getAttribute('href') === `#${id}`;
+        const isActive = id !== null && link.getAttribute('href') === `#${id}`;
         item?.classList.toggle('is-active', isActive);
       }
     };
 
     const updateActive = () => {
       const offset = 96;
+
+      if (headings[0].getBoundingClientRect().top > offset) {
+        setActive(null);
+        return;
+      }
+
       let current = headings[0]?.id ?? '';
 
       for (const heading of headings) {
