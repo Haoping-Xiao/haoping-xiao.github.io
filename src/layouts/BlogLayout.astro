@@ -4,6 +4,7 @@ import BaseLayout from './BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import DiagramRenderer from '../components/DiagramRenderer.astro';
+import { getReadingTime } from '../lib/readingTime';
 
 interface Props {
   post: CollectionEntry<'blog'>;
@@ -12,6 +13,7 @@ interface Props {
 const { post } = Astro.props;
 const { title, description, pubDate, updatedDate, techDomain, product } = post.data;
 const hasLabels = techDomain.length > 0 || product.length > 0;
+const readingTime = getReadingTime(post.body);
 const { Content } = await render(post);
 
 const formattedDate = pubDate.toLocaleDateString('zh-CN', {
@@ -57,6 +59,7 @@ const formattedUpdated = updatedDate?.toLocaleDateString('zh-CN', {
       >
         {title}
       </h1>
+      <p class="text-sm text-[var(--color-muted)]">{readingTime}</p>
       <p class="text-lg leading-relaxed text-[var(--color-muted)]" data-pagefind-meta="description">
         {description}
       </p>
