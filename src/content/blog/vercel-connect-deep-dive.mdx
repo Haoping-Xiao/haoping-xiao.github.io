@@ -6,6 +6,8 @@ techDomain: ["Agent Infra"]
 product: ["Vercel Connect"]
 ---
 
+## 背景
+
 接一个第三方服务，通常是这样开始的：去 Slack 或 GitHub 生成一个 token，粘贴进 `.env`，写进 README「记得配这个环境变量」，然后继续下一件事。
 
 几个月后，这个 token 同时存在于：本地 `.env`、同事的 `.env`、staging 的环境变量、prod 的 CI/CD Secrets，也许还有某个被遗忘的截图或 Slack 消息。它从没被轮换过，因为轮换意味着找到所有用它的地方、同步更新、重新部署——没人有时间做这件事，直到出了安全事故。
