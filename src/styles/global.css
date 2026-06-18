@@ -123,20 +123,16 @@ body {
 
 .prose details {
   margin: 1.5em 0;
-}
-
-.prose details[open] {
   border-left: 3px solid var(--color-border);
   padding-left: 1.25rem;
 }
 
 .prose details summary {
   cursor: pointer;
-  color: var(--color-text);
+  color: var(--color-muted);
   font-weight: 400;
-  font-style: normal;
+  font-style: italic;
   list-style: none;
-  transition: color 0.15s;
 }
 
 .prose details summary::-webkit-details-marker {
