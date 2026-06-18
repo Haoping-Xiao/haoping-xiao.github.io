@@ -14,6 +14,40 @@ product: ["Claude API"]
 
 [Workload Identity Federation（WIF）](https://platform.claude.com/docs/en/manage-claude/workload-identity-federation) 的答案和 Vercel Connect 表面相似——**不存密钥，按需换取**——但方向恰好相反。我最初把方向搞反了，也以为只有一个 Token，还和出站凭证代理混为一谈。下面按我踩过的三个盲区展开。
 
+<details>
+<summary>概念补充：从 Workload 到 Access Token</summary>
+
+**Workload（工作负载）** — 需要调用 Claude API 的程序实体。不是人，是机器：一个 GitHub Actions 流水线、一个 AWS Lambda 函数、一个 K8s Pod。它有自己的运行身份，但没有「账号密码」。
+
+**Issuer（颁发机构）** — Workload 所属的外部身份系统，负责给 Workload 签发 token。GitHub 是 Issuer，AWS STS 是 Issuer，Okta 也是。Claude Platform 通过 Issuer 的公钥来验证 token 是否真实可信，防止伪造。
+
+**OIDC Token（令牌）** — Issuer 给 Workload 颁发的临时身份证明，JWT 格式，带签名、有过期时间，不是静态的。Workload 在换票时用它来证明「我是谁」——**注意：这张票本身不能直接调 Claude API**。
+
+**Claims（声明字段）** — OIDC Token 内部的具体信息字段，是 Federation Rule 进行匹配的原材料：
+
+| Claim | 含义 | 示例 |
+|-------|------|------|
+| `iss` | 我从哪个 Issuer 来 | `https://token.actions.githubusercontent.com` |
+| `sub` | 我具体是谁 | `repo:acme/app:ref:refs/heads/main` |
+| `aud` | 我是给谁用的 | 你配置的 audience 值 |
+| 自定义字段 | 环境、分支等上下文 | `environment`、`ref`… |
+
+**Federation Rule（联邦规则）** — 整个机制的核心配置。格式是「如果 Claims 满足 X 条件，则映射到 Service Account Y」。它是两个身份域之间的外交协议：有条件、可撤销、可审计。客户端换票时**显式指定** `federation_rule_id`，平台不会自动替你搜索匹配。
+
+**Service Account（服务账号）** — Workload 在 Claude Platform 内部的身份代理。通过 Rule 映射后，Workload 以这个非人类身份行动，用量和限速归因到对应 workspace。和 API Key 的本质区别：Key **本身就是凭证**；Service Account **本身不是凭证**，凭证按需签发、可追溯到具体 workload。
+
+**Role（角色）** — 绑定在 Service Account 上的权限集合，粗粒度的权限分组——比如「只能调用模型」、「可以管理组织成员」。Claude Console 里没有单独的 Role 资源，但 Service Account 加入哪些 workspace、Rule 授予什么 scope，合起来等价于这个角色定义。
+
+**Scope（权限范围）** — 在角色基础上进一步收窄的具体权限项，由 Federation Rule 配置。默认 `workspace:developer`，权限等同该 workspace 的 API Key；部分产品场景会锁定为更窄的 scope（如 `org:manage_tunnels`）。实现最小权限：不同 Rule 可以给不同 workload 不同的 scope。
+
+**Access Token（访问令牌）** — Rule 匹配成功后，Claude Platform 颁发给 Workload 的短期令牌（`sk-ant-oat01-...`）。用这个 token 实际调用 Claude API。短命，过期失效，泄漏了危害也极小。SDK 会在过期前自动刷新。
+
+**Audit Trail（审计轨迹）** — 每一次 token 交换、每一次 API 调用，都记录在对应 Service Account 名下。出了问题可以精确追溯到哪个 workload、什么时间、做了什么——而不是「某把共享 API Key 被谁用了」这种模糊归因。
+
+**WIF（Workload Identity Federation）** — 以上所有机制的总称。核心价值：用跨域联邦认证替代静态 API Key，让外部身份直接换取内部权限，整个过程无需人工介入、无需密钥分发。
+
+</details>
+
 ## WIF 是什么：你的 Workload 来连 Claude，不是 Claude 去连 AWS
 
 一句话定位：**用你已有平台身份（AWS、GCP、GitHub Actions 等）换 Claude 短期 token，消灭 `.env` 里的 `sk-ant-...`。**
