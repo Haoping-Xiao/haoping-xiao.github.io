@@ -64,31 +64,19 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
 
   function updateBackToTopPlacement() {
     const backBtn = document.querySelector<HTMLAnchorElement>('.back-to-top-btn');
-    const footer = document.querySelector('footer');
     const toc = document.querySelector('.article-toc');
     if (!backBtn) return;
 
-    const inset = 24;
-    let bottom = inset;
-
-    if (footer) {
-      const footerTop = footer.getBoundingClientRect().top;
-      const overlap = window.innerHeight - footerTop;
-      if (overlap > 0) {
-        bottom = overlap + inset;
-      }
-    }
-
-    backBtn.style.setProperty('--back-to-top-bottom', `${bottom}px`);
-
     const isDesktop = window.matchMedia('(min-width: 1280px)').matches;
     if (isDesktop && toc) {
-      const tocRight = toc.getBoundingClientRect().right;
-      backBtn.style.setProperty('--back-to-top-right', `${window.innerWidth - tocRight}px`);
+      const tocLeft = toc.getBoundingClientRect().left;
+      backBtn.style.setProperty('--back-to-top-left', `${tocLeft}px`);
+      backBtn.style.setProperty('--back-to-top-right', 'auto');
       return;
     }
 
-    backBtn.style.setProperty('--back-to-top-right', `${inset}px`);
+    backBtn.style.setProperty('--back-to-top-left', 'auto');
+    backBtn.style.setProperty('--back-to-top-right', '1.5rem');
   }
 
   function initArticleToc() {
