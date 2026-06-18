@@ -66,24 +66,36 @@ product: ["Claude API"]
 
 第二个盲区：我以为 GitHub Actions 吐出来的 OIDC Token 就是调 Claude 用的最终凭证。
 
-实际上是**两次交换，两张票，用途完全不同**：
+实际上是**两次交换、三张票、三步走完**（第三步是拿 Claude 发的票去调 API，不是第三次换票）：
 
 ```mermaid
 sequenceDiagram
-    participant W as Workload（CI / Pod / Lambda）
-    participant IdP as IdP（GitHub / AWS / GCP）
-    participant C as Claude API
+    participant WL as Workload<br/>(GitHub CI / Lambda / Pod)
+    participant IDP as Issuer / IdP<br/>(GitHub / AWS / Okta)
+    participant TOKEN as POST /v1/oauth/token<br/>(Claude Token Exchange)
+    participant CP as Claude Platform<br/>(Federation Rule / Service Account)
+    participant API as Claude API
 
-    W->>IdP: 请求身份（平台自动注入）
-    IdP-->>W: OIDC JWT（证明「我是谁」）
-    W->>C: POST /v1/oauth/token<br/>带上 JWT + federation_rule_id
-    C->>C: 验签 JWKS + 匹配 Federation Rule
-    C-->>W: sk-ant-oat01-...（短命 access token）
-    W->>C: Authorization: Bearer 调 Messages API
+    Note over WL,IDP: 第一步：获取外部身份证明
+    WL->>IDP: 请求 OIDC Token（ambient，平台自动注入）
+    IDP-->>WL: 返回签名 JWT<br/>包含 iss / sub / aud 等 Claims
+
+    Note over WL,CP: 第二步：用外部身份换 Claude 凭证
+    WL->>TOKEN: 提交 JWT + federation_rule_id<br/>（RFC 7523 jwt-bearer grant）
+    TOKEN->>CP: 验证 JWT 签名（JWKS）<br/>匹配 Federation Rule 的 Claims 条件
+    CP-->>TOKEN: 验证通过，映射到 Service Account
+    TOKEN-->>WL: 返回短期 Claude Access Token<br/>sk-ant-oat01-...（默认 3600s）
+
+    Note over WL,API: 第三步：用 Claude Token 调用 API
+    WL->>API: 携带 sk-ant-oat01-... 调用 Claude API
+    API-->>WL: 正常响应（受 Service Account 的 Role/Scope 约束）
+
+    Note over WL,TOKEN: SDK 自动刷新：到期前 120s advisory / 30s mandatory
 ```
 
 1. **IdP 发 OIDC JWT** — 证明「这个 workload 来自 `repo:acme/app:ref:refs/heads/main`」或「这个 Pod 是 `prod:worker`」。这张票**不能直接调 Claude**。
-2. **Claude 验票后发 `sk-ant-oat01-...`** — 通过 RFC 7523 `jwt-bearer` grant 交换，绑定到你配置的 Service Account，寿命通常几十分钟到几小时。SDK 会在过期前自动刷新。
+2. **Claude 验票后发 `sk-ant-oat01-...`** — 通过 RFC 7523 `jwt-bearer` grant 交换，绑定到你配置的 Service Account，寿命默认 3600 秒（Rule 可配 60–86400）。SDK 会在到期前 120s 尝试 advisory 刷新、30s 前 mandatory 刷新。
+3. **拿 Access Token 调 API** — `Authorization: Bearer` 发请求，权限受 Rule 授予的 scope 约束，调用记录归因到对应 Service Account。
 
 底层 HTTP 长这样（摘自[官方文档](https://platform.claude.com/docs/en/manage-claude/workload-identity-federation)）：
 
