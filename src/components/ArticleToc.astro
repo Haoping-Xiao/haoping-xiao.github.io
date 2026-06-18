@@ -12,7 +12,7 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
 {
   tocHeadings.length > 0 && (
     <nav class="article-toc" aria-label="文章目录">
-      <details class="article-toc__panel">
+      <details class="article-toc__panel" open>
         <summary class="article-toc__summary">
           <span class="article-toc__summary-text">本文目录</span>
           <span class="article-toc__summary-meta">{tocHeadings.length} 节</span>
@@ -41,7 +41,25 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
 }
 
 <script>
+  function syncTocPanelState() {
+    const panel = document.querySelector('.article-toc__panel');
+    if (!(panel instanceof HTMLDetailsElement)) return;
+
+    const isDesktop = window.matchMedia('(min-width: 1280px)').matches;
+    if (isDesktop) {
+      panel.open = true;
+      return;
+    }
+
+    if (panel.dataset.mobileInit !== 'true') {
+      panel.open = false;
+      panel.dataset.mobileInit = 'true';
+    }
+  }
+
   function initArticleToc() {
+    syncTocPanelState();
+
     const toc = document.querySelector('.article-toc');
     if (!toc || toc.dataset.tocInit === 'true') return;
     toc.dataset.tocInit = 'true';
@@ -99,4 +117,5 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
 
   initArticleToc();
   document.addEventListener('astro:page-load', initArticleToc);
+  window.matchMedia('(min-width: 1280px)').addEventListener('change', syncTocPanelState);
 </script>
