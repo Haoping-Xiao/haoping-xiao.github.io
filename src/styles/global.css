@@ -121,6 +121,42 @@ body {
   font-style: italic;
 }
 
+.prose details {
+  margin: 1.5em 0;
+  border-left: 3px solid var(--color-border);
+  padding-left: 1.25rem;
+}
+
+.prose details summary {
+  cursor: pointer;
+  color: var(--color-muted);
+  font-weight: 400;
+  font-style: italic;
+  list-style: none;
+}
+
+.prose details summary::-webkit-details-marker {
+  display: none;
+}
+
+.prose details summary::before {
+  content: "▸ ";
+  font-style: normal;
+  color: var(--color-muted-light);
+}
+
+.prose details[open] summary::before {
+  content: "▾ ";
+}
+
+.prose details summary strong {
+  font-weight: 400;
+}
+
+.prose details > :not(summary) {
+  margin-top: 0.75em;
+}
+
 .prose ul,
 .prose ol {
   margin: 1em 0;

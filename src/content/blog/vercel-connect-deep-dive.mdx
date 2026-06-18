@@ -15,7 +15,7 @@ product: ["Vercel Connect"]
 Vercel Connect 的答案：**不存密钥，按需换取。** 应用在运行时证明自己的身份，Vercel Connect 验证后发给你一个短命 token，用完即弃。
 
 <details>
-<summary>**相关方案：Cursor Cloud Agent 怎么管密钥？**</summary>
+<summary>相关方案：Cursor Cloud Agent 怎么管密钥？</summary>
 
 Cursor 面对同样的挑战——给 AI agent 安全地提供凭证——但选了一条不同的路：密钥还是存在进程里，但对 LLM 的上下文做过滤。
 
@@ -66,7 +66,7 @@ sequenceDiagram
 ## OIDC：无需预置密钥的身份证明
 
 <details>
-<summary>**什么是 OIDC？**</summary>
+<summary>什么是 OIDC？</summary>
 
 **OIDC = OpenID Connect**，让 A 向 B 证明「我是谁」的标准协议。你用过「用 Google 登录」吗？那就是 OIDC：你在 Google 登录，Google 告诉你的 App「这个人是 xxx@gmail.com」，并颁发一个带数字签名的 JWT ID Token，接收方可以验证它没被篡改、确实是 Google 签的。
 
