@@ -303,13 +303,12 @@ body {
 }
 
 
-/* Back-to-top: fixed near bottom; horizontal position tuned via CSS vars */
+/* Back-to-top: fixed at bottom; horizontal position tuned via CSS vars */
 .back-to-top-btn {
-  --back-to-top-bottom: 1.5rem;
   --back-to-top-left: auto;
   --back-to-top-right: 1.5rem;
   position: fixed;
-  bottom: var(--back-to-top-bottom);
+  bottom: 1.5rem;
   left: var(--back-to-top-left);
   right: var(--back-to-top-right);
   z-index: 50;
@@ -330,7 +329,6 @@ body {
   transition:
     opacity 200ms ease,
     transform 200ms ease,
-    bottom 200ms ease,
     left 200ms ease,
     right 200ms ease,
     background-color 150ms ease,
