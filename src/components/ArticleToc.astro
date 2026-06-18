@@ -20,8 +20,8 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
               style={`--depth: ${heading.depth - 2}`}
             >
               <a href={`#${heading.slug}`} class="article-toc__link">
-                <span class="article-toc__label">{heading.text}</span>
                 <span class="article-toc__line" aria-hidden="true" />
+                <span class="article-toc__label">{heading.text}</span>
               </a>
             </li>
           ))
