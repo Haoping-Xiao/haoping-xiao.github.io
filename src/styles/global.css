@@ -303,7 +303,7 @@ body {
 }
 
 
-/* Back-to-top: fixed at bottom; footer stacks above when scrolled into view */
+/* Back-to-top: fixed at bottom, above page content including footer */
 .back-to-top-btn {
   --back-to-top-left: auto;
   --back-to-top-right: 1.5rem;
@@ -311,7 +311,7 @@ body {
   bottom: 1.5rem;
   left: var(--back-to-top-left);
   right: var(--back-to-top-right);
-  z-index: 40;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
