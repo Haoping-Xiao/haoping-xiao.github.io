@@ -20,7 +20,8 @@ npm run dev
 title: "文章标题"
 description: "文章摘要"
 pubDate: 2025-06-17
-tags: ["标签1", "标签2"]
+techDomain: ["Agent Infra"]
+product: ["Vercel Connect"]
 ---
 
 正文内容...

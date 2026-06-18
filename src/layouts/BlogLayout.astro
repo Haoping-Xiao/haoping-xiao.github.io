@@ -10,7 +10,8 @@ interface Props {
 }
 
 const { post } = Astro.props;
-const { title, description, pubDate, updatedDate, tags, techDomain, product } = post.data;
+const { title, description, pubDate, updatedDate, techDomain, product } = post.data;
+const hasLabels = techDomain.length > 0 || product.length > 0;
 const { Content } = await render(post);
 
 const formattedDate = pubDate.toLocaleDateString('zh-CN', {
@@ -68,15 +69,17 @@ const formattedUpdated = updatedDate?.toLocaleDateString('zh-CN', {
         }
       </div>
       {
-        tags.length > 0 && (
+        hasLabels && (
           <div class="flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <a
-                href={`/tags/${tag}`}
-                class="rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-muted)] transition hover:text-[var(--color-text)]"
-              >
-                {tag}
-              </a>
+            {techDomain.map((domain) => (
+              <span class="rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-muted)]">
+                {domain}
+              </span>
+            ))}
+            {product.map((item) => (
+              <span class="rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-muted)]">
+                {item}
+              </span>
             ))}
           </div>
         )
