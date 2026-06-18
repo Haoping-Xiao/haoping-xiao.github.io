@@ -62,6 +62,35 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
     }
   }
 
+  function updateBackToTopPlacement() {
+    const backBtn = document.querySelector<HTMLAnchorElement>('.back-to-top-btn');
+    const footer = document.querySelector('footer');
+    const toc = document.querySelector('.article-toc');
+    if (!backBtn) return;
+
+    const inset = 24;
+    let bottom = inset;
+
+    if (footer) {
+      const footerTop = footer.getBoundingClientRect().top;
+      const overlap = window.innerHeight - footerTop;
+      if (overlap > 0) {
+        bottom = overlap + inset;
+      }
+    }
+
+    backBtn.style.setProperty('--back-to-top-bottom', `${bottom}px`);
+
+    const isDesktop = window.matchMedia('(min-width: 1280px)').matches;
+    if (isDesktop && toc) {
+      const tocRight = toc.getBoundingClientRect().right;
+      backBtn.style.setProperty('--back-to-top-right', `${window.innerWidth - tocRight}px`);
+      return;
+    }
+
+    backBtn.style.setProperty('--back-to-top-right', `${inset}px`);
+  }
+
   function initArticleToc() {
     syncTocPanelState();
 
@@ -96,6 +125,8 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
     const updateActive = () => {
       const offset = 96;
 
+      updateBackToTopPlacement();
+
       if (articleTop && backBtn) {
         const showBack = articleTop.getBoundingClientRect().bottom < offset;
         backBtn.classList.toggle('is-visible', showBack);
@@ -126,9 +157,13 @@ const tocHeadings = headings.filter((heading) => heading.depth >= 2 && heading.d
     for (const heading of headings) observer.observe(heading);
     updateActive();
     window.addEventListener('scroll', updateActive, { passive: true });
+    window.addEventListener('resize', updateBackToTopPlacement, { passive: true });
   }
 
   initArticleToc();
   document.addEventListener('astro:page-load', initArticleToc);
-  window.matchMedia('(min-width: 1280px)').addEventListener('change', syncTocPanelState);
+  window.matchMedia('(min-width: 1280px)').addEventListener('change', () => {
+    syncTocPanelState();
+    updateBackToTopPlacement();
+  });
 </script>
