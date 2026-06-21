@@ -1,68 +1,34 @@
 ---
 title: "如何为一个全新领域做 Evaluation"
-description: "从 OpenAI LifeSciBench 拆解 workflow-first benchmark 的完整链路：taxonomy、rubric 评分与 pass rate 双指标，以及 MVP 落地清单。"
+description: "从 OpenAI LifeSciBench 拆解一套可复用的 evaluation 设计框架：taxonomy、rubric 评分与 pass rate 双指标。"
 pubDate: 2026-06-19
 updatedDate: 2026-06-19
-techDomain: ["Evaluation"]
-product: ["LifeSciBench"]
+techDomain: ["Agent Evaluation"]
+product: []
 ---
 
-当 agent 开始能写代码、读论文、帮研究员做决策时，工程问题不再是「模型知识够不够」，而是：**我们用什么标准判断它在这个领域里真的有用？**
+## 问题：现有 Agent benchmark 是基于理想工作环境下的简化测试， 不符合真实场景。
 
-读完这篇，你能从评测数据和指标设计角度理解「考试能力」与「研究判断力」之间的 gap，把 LifeSciBench 的方法拆成一套可复用的 evaluation 设计框架，并在新领域里启动一个 50 题规模的 MVP benchmark。
 
-## 问题：「考试能力」与「研究判断力」之间的 gap
 
-当 agent 开始能写代码、读论文、帮研究员做决策时，工程问题不再是「模型知识够不够」，而是：**我们用什么标准判断它在这个领域里真的有用？**
+当 agent 开始能写代码、读论文、帮研究员做决策时，我们关心的不是在理想情况下的选择题与判断题，而是真实场景下是否能正确推理、判断、回答与行动。OpenAI 2026 年 6 月发布的 [LifeSciBench](https://openai.com/index/introducing-life-sci-bench/) 正是试图跨越这个 gap——不是出更多题，而是用**专家 workflow** 定义测什么，用**细粒度 rubric** 定义怎么评。从评测数据和评测设计角度看，现有 benchmark 和真实的研究工作场景之间的 gap 主要体现在以下两个维度。
 
-从评测数据和指标设计角度看，「考试能力」和「研究判断力」之间的 gap 主要体现在四个维度。OpenAI 2026 年 6 月发布的 [LifeSciBench](https://openai.com/index/introducing-life-sci-bench/) 正是试图跨越这个 gap——不是出更多题，而是用**专家 workflow** 定义测什么，用**细粒度 rubric** 定义怎么评。
-
-| 传统 benchmark 测什么 | Workflow benchmark 测什么 |
-|----------------------|---------------------------|
-| 知识点是否正确 | 能否完成一段真实工作流 |
-| 最终答案对错 | 推理过程是否科学、输出是否可直接用于决策 |
-| 纯文本 prompt | prompt + artifact（论文、表格、序列文件等） |
-| 单一 accuracy | pass rate + partial credit rubric score |
-
-### 1. 数据构造（Task Construction）
+### 1. 上下文环境的理想化
 
 **考试型 benchmark** 通常从已发表文献或数据库中**抽取单一事实点**，人工改写成 QA 对（如 PubMedQA、BioASQ）。问题本身**已经被剥离了上下文噪音**——干扰信息被去除，只留下解题所需的信息；任务边界清晰，一个问题对应一个明确的认知动作（recall、classify、predict）。
 
-**研究判断力**需要的数据则不同：必须呈现**原始的、未经裁剪的证据集合**——多篇论文、矛盾的实验数据、不完整的 assay 结果。模型要**自己判断哪些信息相关、哪些矛盾需要调和**，而不是被告知「这是你需要的全部信息」。现实是 ill-defined 的，不存在干净的输入-输出边界。
+**真实的研究工作 benchmark**需要的数据则不同：必须呈现**原始的、未经裁剪的证据集合**——多篇论文、矛盾的实验数据、不完整的 assay 结果。模型要**自己判断哪些信息相关、哪些矛盾需要调和**，而不是被告知「这是你需要的全部信息」。现实是 ill-defined 的，不存在干净的输入-输出边界。
 
 LifeSciBench 的数据设计体现了这一点：53% 的 task 需要解读至少一个 artifact，79% 需要多步推理（平均 4 步），1,062 个附加文件（figure、PDF、sequence 等）刻意保留了真实研究中的信息不完整性。
 
-### 2. 标签与参考答案（Ground Truth）
+### 2. 规则单一的参考答案
 
 **考试型** benchmark 有单一 gold label，可用 exact match / F1 / accuracy 自动打分——答案的「正确性」不依赖评分者的专业判断。
 
 **研究判断力**没有单一正确答案，而是存在**一组合理但不同的决策路径**。比如「下一步该做哪个实验」可能有 3 种合理选择，优劣取决于资源、风险偏好、已有证据强度。评分本质上需要**专家评审（rubric-based human / LLM-judge evaluation）**，而不是字符串匹配；指标从「对/错」变成「质量分级」——推理是否合理、是否考虑了关键风险点、是否暴露了过度自信。
 
-LifeSciBench 的 accepted task 锚定于 **verifiable answer** 或 **≥90% expert consensus**，再用平均 25 条/task 的 rubric 把「质量分级」拆成可操作的 claim-level criteria。
+LifeSciBench 的 accepted task 锚定于 **verifiable answer** 或 **≥90% expert consensus**，再用平均 25 条/task 的 rubric 把「质量分级」拆成可操作的 claim-level criteria。且使用 **Pass Rate**（70% rubric 阈值）和 **Rubric Score**（partial credit）双轨应对答案难以判断的问题：约 14% 的 task 出现 pass rate 低于 20%、但 rubric score 达到 50% 以上——模型方向对，但缺关键约束。这种 nuance 是单一 accuracy 看不到的。
 
-### 3. 评测指标（Metrics）
-
-| 维度 | 考试型指标 | 研究判断力需要的指标 |
-|------|-----------|---------------------|
-| 衡量对象 | 最终答案是否匹配 | 推理过程、证据权衡、不确定性表达 |
-| 可重复性 | 高（自动化、确定性打分） | 低（依赖人工 / LLM judge，主观性强） |
-| 失败模式捕捉 | 只能看到「答错了」 | 需要看到「为什么错」——证据冲突没处理好？风险评估缺失？实验设计有逻辑漏洞？ |
-| 难度分布 | 题目难度可控、可分层 | 真实任务难度天然耦合（一个 task 同时包含多种能力需求） |
-| 跨任务泛化 | 单一技能、单一指标 | 需要复合指标（comprehensiveness + calibration + actionability） |
-
-LifeSciBench 用 **Pass Rate**（70% rubric 阈值）和 **Rubric Score**（partial credit）双轨应对此问题：约 14% 的 task 出现 pass rate 低于 20%、但 rubric score 达到 50% 以上——模型方向对，但缺关键约束。这种 nuance 是单一 accuracy 看不到的。
-
-### 4. 方法论矛盾与折中方案
-
-从 eval science 角度看，核心矛盾可以归纳为：
-
-> **考试型 benchmark 优化的是「可扩展、低成本、高一致性」的自动化评分，而研究判断力评估需要的是「高保真但高成本」的专家式评判。**
-
-二者在工程上是**矛盾的**——要做到大规模、自动化、可复现，就必须把任务结构化、答案标准化；但一旦标准化，就丢失了真实科研中最关键的部分：**模糊性下的判断质量**。
-
-LifeSciBench 及同类新一代 life science agent benchmark 的折中方案是：**rubric + LLM-as-judge + 人工校验的多层评分体系**，用更复杂的指标体系去弥补「clean reference answer」范式的根本局限，同时保留一定的可扩展性。
-
-**何时不必走这条路：** 若你只需验证模型是否掌握某套 API 或语法规则，现有 unit test 或 MCQ 足够；若目标是「模型能否替代/辅助领域专家做决策」，就需要 workflow-first 设计。
 
 ## 第一步：用 workflow taxonomy 定义「测什么」
 
