@@ -7,28 +7,31 @@ techDomain: ["Agent Evaluation"]
 product: []
 ---
 
-## 问题：现有 Agent benchmark 是基于理想工作环境下的简化测试， 不符合真实场景。
+当 agent 开始能写代码、读论文、帮研究员做决策时，我们关心的不是在理想条件下的 recall 和分类，而是**真实工作流里能否正确推理、判断，并给出可操作的输出**。
 
+现有 agent benchmark 大多是在理想化环境中做简化测试：信息被预先裁剪，答案被预先标准化。它们测得出「知不知道」，却测不出「在模糊证据下能不能做出靠谱的科研判断」。
 
+OpenAI 2026 年 6 月发布的 [LifeSciBench](https://openai.com/index/introducing-life-sci-bench/) 试图跨越这个 gap——不是出更多题，而是用**专家 workflow** 定义测什么，用**细粒度 rubric** 定义怎么评。从评测数据和评测设计角度看，理想化 benchmark 与真实研究工作之间的 gap，主要体现在以下两个维度。
 
-当 agent 开始能写代码、读论文、帮研究员做决策时，我们关心的不是在理想情况下的选择题与判断题，而是真实场景下是否能正确推理、判断、回答与行动。OpenAI 2026 年 6 月发布的 [LifeSciBench](https://openai.com/index/introducing-life-sci-bench/) 正是试图跨越这个 gap——不是出更多题，而是用**专家 workflow** 定义测什么，用**细粒度 rubric** 定义怎么评。从评测数据和评测设计角度看，现有 benchmark 和真实的研究工作场景之间的 gap 主要体现在以下两个维度。
+## 问题：理想化 benchmark 测不到真实研究判断
 
 ### 1. 上下文环境的理想化
 
 **考试型 benchmark** 通常从已发表文献或数据库中**抽取单一事实点**，人工改写成 QA 对（如 PubMedQA、BioASQ）。问题本身**已经被剥离了上下文噪音**——干扰信息被去除，只留下解题所需的信息；任务边界清晰，一个问题对应一个明确的认知动作（recall、classify、predict）。
 
-**真实的研究工作 benchmark**需要的数据则不同：必须呈现**原始的、未经裁剪的证据集合**——多篇论文、矛盾的实验数据、不完整的 assay 结果。模型要**自己判断哪些信息相关、哪些矛盾需要调和**，而不是被告知「这是你需要的全部信息」。现实是 ill-defined 的，不存在干净的输入-输出边界。
+**真实研究工作**需要的数据则不同：必须呈现**原始的、未经裁剪的证据集合**——多篇论文、矛盾的实验数据、不完整的 assay 结果。模型要**自己判断哪些信息相关、哪些矛盾需要调和**，而不是被告知「这是你需要的全部信息」。现实是 ill-defined 的，不存在干净的输入-输出边界。
 
-LifeSciBench 的数据设计体现了这一点：53% 的 task 需要解读至少一个 artifact，79% 需要多步推理（平均 4 步），1,062 个附加文件（figure、PDF、sequence 等）刻意保留了真实研究中的信息不完整性。
+LifeSciBench 的数据设计正针对这一点：53% 的 task 需要解读至少一个 artifact，79% 需要多步推理（平均 4 步），1,062 个附加文件（figure、PDF、sequence 等）刻意保留了真实研究中的信息不完整性。
 
-### 2. 规则单一的参考答案
+### 2. 参考答案过于单一
 
-**考试型** benchmark 有单一 gold label，可用 exact match / F1 / accuracy 自动打分——答案的「正确性」不依赖评分者的专业判断。
+**考试型 benchmark** 有单一 gold label，可用 exact match / F1 / accuracy 自动打分——答案的「正确性」不依赖评分者的专业判断。
 
-**研究判断力**没有单一正确答案，而是存在**一组合理但不同的决策路径**。比如「下一步该做哪个实验」可能有 3 种合理选择，优劣取决于资源、风险偏好、已有证据强度。评分本质上需要**专家评审（rubric-based human / LLM-judge evaluation）**，而不是字符串匹配；指标从「对/错」变成「质量分级」——推理是否合理、是否考虑了关键风险点、是否暴露了过度自信。
+**真实研究判断**则没有单一正确答案，而是存在**一组合理但不同的决策路径**。比如「下一步该做哪个实验」可能有 3 种合理选择，优劣取决于资源、风险偏好、已有证据强度。评分本质上需要**专家评审（rubric-based human / LLM-judge evaluation）**，而不是字符串匹配；指标也从「对/错」变成「质量分级」——推理是否合理、是否考虑了关键风险点、是否暴露了过度自信。
 
-LifeSciBench 的 accepted task 锚定于 **verifiable answer** 或 **≥90% expert consensus**，再用平均 25 条/task 的 rubric 把「质量分级」拆成可操作的 claim-level criteria。且使用 **Pass Rate**（70% rubric 阈值）和 **Rubric Score**（partial credit）双轨应对答案难以判断的问题：约 14% 的 task 出现 pass rate 低于 20%、但 rubric score 达到 50% 以上——模型方向对，但缺关键约束。这种 nuance 是单一 accuracy 看不到的。
+LifeSciBench 的应对方式是：accepted task 锚定于 **verifiable answer** 或 **≥90% expert consensus**，再用平均 25 条/task 的 rubric 把「质量分级」拆成可操作的 claim-level criteria。下文第四、五步会展开 rubric 设计与双指标报告的具体做法。
 
+理解这两个 gap 之后，LifeSciBench 的可迁移方法可以概括为五步。
 
 ## 第一步：用 workflow taxonomy 定义「测什么」
 
@@ -159,7 +162,7 @@ LifeSciBench 报告约 14% 的 task 出现 pass rate 低于 20%、但 rubric sco
 
 ## 第五步：Pass Rate + Rubric Score 双指标报告
 
-上文第三节已说明，研究判断力评估需要复合指标。LifeSciBench 的具体实现是两个互补 metric：
+问题节第二节已指出，真实研究的参考答案往往无法 string match。LifeSciBench 用两个互补 metric 应对：
 
 | 指标 | 定义 | 读法 |
 |------|------|------|
