@@ -1,217 +1,158 @@
 ---
 title: "如何为一个全新领域做 Evaluation"
-description: "从 OpenAI LifeSciBench 拆解一套可复用的 evaluation 设计框架：taxonomy、rubric 评分与 pass rate 双指标。"
+description: "从 LifeSciBench 论文拆解一套可复用的 evaluation 设计框架：四个 gap、五步方法与双指标报告。"
 pubDate: 2026-06-19
-updatedDate: 2026-06-19
+updatedDate: 2026-06-21
 techDomain: ["Agent Evaluation"]
-product: []
+product: ["LifeSciBench"]
 ---
 
-当 agent 开始能写代码、读论文、帮研究员做决策时，我们关心的不是在理想条件下的 recall 和分类，而是**真实工作流里能否正确推理、判断，并给出可操作的输出**。
+当 agent 开始能写代码、读论文、帮研究员做决策时，我们关心的不是理想条件下的 recall，而是**真实工作流里能否正确推理、判断，并给出可操作的输出**。
 
-现有 agent benchmark 大多是在理想化环境中做简化测试：信息被预先裁剪，答案被预先标准化。它们测得出「知不知道」，却测不出「在模糊证据下能不能做出靠谱的科研判断」。
+[LifeSciBench](https://openai.com/index/introducing-life-sci-bench/)（[论文预印本](https://cdn.openai.com/pdf/b4299379-0a97-4ffa-8b9b-c3fbb299caa9/lifescibench_preprint.pdf)）用 **750 道专家题 + 19,020 条 rubric criteria** 做了一次完整示范：用 workflow 定义测什么，用 rubric 定义怎么评。论文指出，现有 life science eval 要么偏 factual QA，要么偏 narrow 计算分析，**几乎没有 benchmark 同时具备真实工作所需的广度与深度**。
 
-OpenAI 2026 年 6 月发布的 [LifeSciBench](https://openai.com/index/introducing-life-sci-bench/) 试图跨越这个 gap——不是出更多题，而是用**专家 workflow** 定义测什么，用**细粒度 rubric** 定义怎么评。从评测数据和评测设计角度看，理想化 benchmark 与真实研究工作之间的 gap，主要体现在以下两个维度。
+理想化 benchmark 与真实研究的 gap，论文归纳为四点：
 
-## 问题：理想化 benchmark 测不到真实研究判断
-
-### 1. 上下文环境的理想化
-
-**考试型 benchmark** 通常从已发表文献或数据库中**抽取单一事实点**，人工改写成 QA 对（如 PubMedQA、BioASQ）。问题本身**已经被剥离了上下文噪音**——干扰信息被去除，只留下解题所需的信息；任务边界清晰，一个问题对应一个明确的认知动作（recall、classify、predict）。
-
-**真实研究工作**需要的数据则不同：必须呈现**原始的、未经裁剪的证据集合**——多篇论文、矛盾的实验数据、不完整的 assay 结果。模型要**自己判断哪些信息相关、哪些矛盾需要调和**，而不是被告知「这是你需要的全部信息」。现实是 ill-defined 的，不存在干净的输入-输出边界。
-
-LifeSciBench 的数据设计正针对这一点：53% 的 task 需要解读至少一个 artifact，79% 需要多步推理（平均 4 步），1,062 个附加文件（figure、PDF、sequence 等）刻意保留了真实研究中的信息不完整性。
-
-### 2. 参考答案过于单一
-
-**考试型 benchmark** 有单一 gold label，可用 exact match / F1 / accuracy 自动打分——答案的「正确性」不依赖评分者的专业判断。
-
-**真实研究判断**则没有单一正确答案，而是存在**一组合理但不同的决策路径**。比如「下一步该做哪个实验」可能有 3 种合理选择，优劣取决于资源、风险偏好、已有证据强度。评分本质上需要**专家评审（rubric-based human / LLM-judge evaluation）**，而不是字符串匹配；指标也从「对/错」变成「质量分级」——推理是否合理、是否考虑了关键风险点、是否暴露了过度自信。
-
-LifeSciBench 的应对方式是：accepted task 锚定于 **verifiable answer** 或 **≥90% expert consensus**，再用平均 25 条/task 的 rubric 把「质量分级」拆成可操作的 claim-level criteria。下文第四、五步会展开 rubric 设计与双指标报告的具体做法。
-
-LifeSciBench 针对这两个 gap 给出了系统性解法，其 benchmark 构建方法可概括为五步。
-
-## 第一步：用 workflow taxonomy 定义「测什么」
-
-LifeSciBench 没有从 biology textbook 章节出发，而是 **survey 一线从业者**，把高频工作聚成 7 类 workflow：
-
-- Evidence handling（证据提取与整合）
-- Analysis
-- Design, optimization & prediction
-- Scientific reasoning
-- Validation & operations
-- Translation（bench-to-bedside）
-- Scientific communication
-
-再交叉 7 个 biological domain，共 750 个 task。
-
-**迁移到新领域的做法：**
-
-1. 访谈 10–30 位从业者，收集「你最近一次让同事或 AI 帮忙的任务」
-2. 按 **workflow** 聚类，而不是按知识点聚类
-3. 输出二维 taxonomy：`Workflow × Domain × Output Type`
-
-Workflow 是 benchmark 的骨架。LifeSciBench 后续所有分析——哪个 workflow 最难、模型在哪类任务进步最快——都建立在这套分类上。
-
-```mermaid
-flowchart LR
-    A["专家访谈"] --> B["Workflow Taxonomy"]
-    B --> C["Task 设计"]
-    C --> D["Rubric 评分"]
-    D --> E["维度分析"]
-```
-
-## 第二步：Task 要像「给靠谱同事提需求」
-
-每个 LifeSciBench task 的结构固定：
-
-```
-Scientific prompt（任务描述）
-+ Context / Artifacts（图表、PDF、序列、表格等）
-→ Free-response answer（开放回答）
-→ Task-specific rubric（逐条评分）
-```
-
-几个关键数字说明复杂度设计：
-
-| 指标 | LifeSciBench 数据 |
-|------|------------------|
-| 多步推理 task 占比 | 79%（平均 4 步/task） |
-| 需要解读 artifact 的 task | 53% |
-| 附加 artifact 总数 | 1,062 个 |
-| 每 task rubric criteria 均值 | 25 条（共 19,020 条） |
-
-好 task 必须满足四条：
-
-1. **Real-world relevance** — 专家真的会这么问
-2. **Grading anchor** — 有可验证正确答案，或专家共识 ≥90%
-3. **Discriminative** — 能区分「结论对但遗漏关键 caveat」和「完整且可操作」
-4. **Partial credit friendly** — 部分推理有价值，不应全有或全无
-
-Blog 里的 FDA 审评例子很典型：不是问 AAV 是什么，而是「请逐项 pressure-test 这个 accelerated approval package，指出 FDA 会在哪里质疑，以及需要什么额外数据来 closing gap」。这类 task 有**一个核心正确解读**，但仍能通过 reasoning 深度和 uncertainty handling 拉开差距——reviewer 评论称之为「strong task」。
-
-## 第三步：专家写题 + 独立审题，两道防线
-
-LifeSciBench 的质量控制不是「找 GPT 生成题目再人工扫一眼」，而是一套工业级 pipeline：
-
-| 角色 | 规模 | 职责 |
-|------|------|------|
-| Task author | 173 位 PhD + biotech/pharma 经验 | 写 task |
-| Expert reviewer | 453 位（未参与写题） | 验证 benchmark 质量 |
-| Revision | 平均 6 轮 automated review + ≥2 轮 expert review | 保证科学性与可评性 |
-
-Accepted task 锚定于 **verifiable answer** 或 **≥90% expert consensus**。453 位独立 reviewer 对四类质量维度（真实相关性、科学推理覆盖、科学 grounding、整体有用性）的同意率均超过 96%。
-
-**你可以缩小的 MVP 版本：**
-
-```
-3–5 位 domain expert 写 task
-2–3 位独立 expert review（不能是作者）
-每 task 至少 2 轮 revision
-Consensus: ≥3/3 或 ≥4/5 专家同意「这题能评、评得公平」
-```
-
-核心原则：**写题人和验题人必须分离**，否则 rubric 会悄悄偏向作者自己的表达习惯。
-
-## 第四步：Rubric 评「过程 + 有用性」，不只评 final answer
-
-LifeSciBench 的 grading 哲学是：
-
-> 很多任务不能只看 final answer。结论对但遗漏关键 assay limitation，仍是不完整回答；反之，部分推理质量高但未 fully solve，也应给 partial credit。
-
-以 FDA 审评 task 为例，rubric 拆成 claim-level criteria 并加权：
-
-| Criterion | Points |
-|-----------|--------|
-| 识别 micro-dystrophin 定量 assay 问题（MANEX1A epitope sharing、标准品无效等） | +24 |
-| 解释 expression level ≠ surrogate endpoint validity | +22 |
-| 指出 biopsy / tissue composition / age-window confounding | +19 |
-| 批评 NSAA 外部 natural-history comparator 与统计方法 | +12 |
-| 讨论 AAV durability、免疫反应、transaminitis、myocarditis | +15 |
-| 指出 patient selection / generalizability 限制 | +8 |
-
-注意：**最关键的错误权重最高**（assay 问题 +24），而不是平均分配。这反映真实评审：一个 assay 设计 flaw 可能让整个 surrogate endpoint 论证 collapse。
-
-Rubric 设计 checklist：
-
-```
-□ 核心结论是否正确
-□ 关键 reasoning step 是否覆盖
-□ Caveats / uncertainty 是否主动提出
-□ 是否使用了 artifact 中的证据
-□ 输出格式是否达到可直接使用的精确度（numeric / sequence 等）
-□ 是否遗漏 high-consequence 细节
-```
+| 考试型 benchmark 缺什么 | LifeSciBench 补什么 |
+|------------------------|---------------------|
+| 证据被裁剪成纯文本 QA | **Complex artifacts** — figure、PDF、sequence、structure… |
+| 指令精确、信息给全 | **Situational ambiguity** — 模糊 prompt、不完整证据、open-ended 粒度 |
+| 孤立知识点、窄域技能 | **Realism** — 按科学家实际 workflow 组织，跨 domain 覆盖 |
+| 单一 gold label、自动打分 | **Expert-reviewed rubrics** — 专家写 rubric，多轮 QA 审查评分标准 |
 
 <details>
-<summary>LifeSciBench 与传统 MCQ benchmark 的评分差异</summary>
+<summary>四个 gap 分别意味着什么？</summary>
 
-| 维度 | MCQ / exact match | LifeSciBench rubric |
-|------|-------------------|---------------------|
-| 评分粒度 | 题级 0/1 | criterion 级 partial credit |
-| 对「差一点」的处理 | 算错 | 可能拿到 50%+ rubric score 但 pass 失败 |
-| 对 reasoning 的奖励 | 无 | 高质量中间步骤可得分 |
-| 对 caveat 的要求 | 通常无 | 主动提出 uncertainty 是独立 criterion |
-| 评分成本 | 低（自动） | 高（task-specific rubric，通常需 LLM-as-judge + 人工校准） |
+**1. Complex artifacts** — 考试型 benchmark 从文献抽事实点改写成 QA（PubMedQA、BioASQ），模型只处理 prompt 文字；真实工作则要求读 gel figure、Visium h5、SMILES、PDF 等附件。LifeSciBench：53% task 需 artifact，1,062 个文件；有 artifact 时 GPT-Rosalind pass rate 从 44.5% 降到 28.6%。
 
-LifeSciBench 报告约 14% 的 task 出现 pass rate 低于 20%、但 rubric score 达到 50% 以上——模型方向对，但缺关键约束。这种 nuance 是单一 accuracy 看不到的。
+**2. Situational ambiguity** — 考题边界清晰、信息给全；真实 prompt 常省略背景、目标模糊。LifeSciBench 刻意 open-ended：不只评对错，还评 caveat、假设、细节粒度是否到位。79% task 需多步推理（平均 4 步）。
+
+**3. Realism** — 知识点 benchmark 场景窄；真实工作横跨 evidence handling、analysis、design、translation、communication 等。LifeSciBench 用 7 workflow × 7 biological domain 组织 750 task，taxonomy 用于分析强弱，而非把科研切成互斥单技能。
+
+**4. Expert-reviewed rubrics** — 难点不只是「没有唯一答案」，而是**好答案的标准必须先被专家定义并审查**。LifeSciBench 每题同时写 prompt + rubric，经 ≥2 轮 expert review，重点查 question-rubric consistency；锚定 verifiable answer 或 ≥90% consensus，平均 25 条/task 的 claim-level criteria。
 
 </details>
 
-## 第五步：Pass Rate + Rubric Score 双指标报告
+LifeSciBench 针对这四个 gap 给出了系统性解法，构建方法可概括为五步。
 
-问题节第二节已指出，真实研究的参考答案往往无法 string match。LifeSciBench 用两个互补 metric 应对：
+## 第一步：用 workflow taxonomy 定义「测什么」
+
+不要从 textbook 章节出题，而是 **survey 从业者**，按他们实际做的工作聚类。LifeSciBench 得到 7 类 workflow × 7 个 biological domain，共 750 task——这是 **Realism** 的落地。
+
+迁移到新领域：访谈 10–30 位专家 → 按 **workflow**（不是知识点）聚类 → 输出 `Workflow × Domain × Output Type` taxonomy。
+
+<details>
+<summary>7 类 workflow 与 7 个 domain</summary>
+
+| Workflow | 测什么 |
+|----------|--------|
+| Evidence handling | 提取、比较、整合论文/图表/监管文件/实验输出 |
+| Analysis | 定量、统计、计算或机制分析 |
+| Design & optimization | 分子、assay、实验、construct、protocol 设计优化 |
+| Scientific reasoning | 机制解释、假设评估、不确定性下推理 |
+| Validation & operations | 排查、质控、可行性、转化风险 |
+| Translation | 临床前证据 → 临床意义、试验设计、安全性 |
+| Scientific communication | 面向特定受众组织、解释结论 |
+
+Domain：Genomics · Chemistry/MedChem · Protein & Structural Biology · Molecular & Cell Biology · Assays & Screening · Bioinformatics/Comp Bio · Clinical/Translational Science
+
+</details>
+
+## 第二步：Task 像「给靠谱同事提需求」
+
+结构固定：**prompt + artifacts + rubric**。Prompt 用自然科研语言、可 intentionally open-ended；模型 **single-turn** 产出最终回答。
+
+好 task 四条：**专家真会问 · 有 grading anchor · 能区分 caveat 遗漏 · 支持 partial credit**。
+
+<details>
+<summary>Task 结构与数据规模</summary>
+
+```
+Scientific prompt + Artifacts → Free-response → Task-specific rubric
+```
+
+| 指标 | 数据 |
+|------|------|
+| 多步推理 | 79%（平均 4 步） |
+| 需 artifact | 53% |
+| 附加文件 | 1,062 个 |
+| Rubric criteria | 平均 25 条/task |
+
+**Visium 空间转录组**（Analysis）：读 h5 附件 → 聚类注释 → 推荐治疗靶点，rubric 逐条评聚类、靶点、统计量和 caveat。**FDA 审评**（Translation）：逐项 pressure-test approval package——有核心解读，靠 reasoning 深度拉开差距。
+
+</details>
+
+## 第三步：专家写题 + 独立审题
+
+173 位 PhD（≥2 年 biotech/pharma 经验）写题，453 位独立专家验题；平均 6 轮 automated review + ≥2 轮 expert review，**写题人与验题人必须分离**。
+
+<details>
+<summary>审查维度与 MVP 缩小版</summary>
+
+入库前四轮审查：question-rubric consistency · scientific ambition · fact check · formatting。
+
+MVP 版：3–5 位 expert 写题 → 2–3 位独立 review → 每题 ≥2 轮 revision → ≥3/3 或 ≥4/5 共识「能评、评得公平」。
+
+</details>
+
+## 第四步：Rubric 评过程，不只评 final answer
+
+> 结论对但遗漏关键 assay limitation，仍是不完整；部分推理质量高但未 fully solve，也应 partial credit。
+
+Rubric 按 **claim-level** 加权——关键 flaw 权重最高。论文 Appendix C 六原则：Specificity · Atomicity · Evaluability · Grounding · Non-redundancy · Operational usefulness。评分用 automated grader + 子集 **spot-validation**。
+
+<details>
+<summary>FDA 审评 rubric 示例与 MCQ 对比</summary>
+
+| Criterion | Points |
+|-----------|--------|
+| 识别 micro-dystrophin 定量 assay 问题 | +24 |
+| 解释 expression ≠ surrogate endpoint | +22 |
+| 指出 biopsy / age-window confounding | +19 |
+| 批评 NSAA comparator 统计 | +12 |
+| 讨论 AAV durability / 免疫 / 安全 | +15 |
+| 指出 patient selection 限制 | +8 |
+
+| | MCQ | LifeSciBench rubric |
+|---|-----|---------------------|
+| 粒度 | 题级 0/1 | criterion 级 partial credit |
+| 「差一点」 | 算错 | 50%+ score 但 pass 失败 |
+| 成本 | 低 | rubric + LLM-judge + spot-check |
+
+109 个 task：pass rate 低于 20%、rubric score 仍 ≥50%——方向对，缺关键约束。
+
+</details>
+
+## 第五步：Normalized Score + Pass Rate 双报告
 
 | 指标 | 定义 | 读法 |
 |------|------|------|
-| **Pass Rate** | 达到 task-level 70% rubric 阈值的 task 占比 | 硬门槛：这题算不算「做对了」 |
-| **Score** | 平均 rubric reward | 软信号：partial credit、进步趋势 |
+| **Normalized Score** | 得分 / 该题总分，task 等权均值 | partial credit、进步趋势 |
+| **Pass Rate** | rubric ≥ 70% 的 task 占比 | 硬门槛：算不算做对 |
 
-GPT-Rosalind 相对 GPT-5.5：overall pass rate 从 25.7% 升到 36.1%——绝对值仍低，说明 benchmark 远未饱和，但有区分度。
+GPT-Rosalind 最强：**0.576 / 36.1%**（GPT-5.5：0.519 / 25.7%）。171 题（22.8%）零模型 pass——benchmark 远未饱和。**两个数字都要报**，且必须按 workflow / artifact / output format 切片，否则 headline number 会误导。
 
-**必须按维度切片**，否则 headline number 会误导：
+<details>
+<summary>维度切片与 benchmark 局限</summary>
 
-- **Workflow type：** Translation 和 Scientific Communication 进步最快；Design/Optimization 和 Analysis 最难（pass rate ~30%）
-- **Artifact use：** 有 artifact 时 pass rate 从 45.1% 降到 28.1%
-- **Output format：** exact numeric（14.8%）和 sequence/structure（24.0%）远低于 free text
+- **Workflow：** Translation（0.712）和 Scientific Communication（0.718）最强；Design/Optimization 和 Analysis 最难
+- **Artifact：** text-only 44.5% → 有 artifact 28.6%
+- **Output format：** sequence/structure 成功率 18–47%；generate/construct 几乎无模型间提升
 
-这些 slice 直接指导产品优先级：若你的 agent 要读 PDF 做决策，text-only benchmark 分数几乎没有预测力。
+**Limitation：** single-turn、self-contained task；**bench 高分 ≠ research impact**，需 deployment study 验证。
 
-## MVP 落地清单
+**常见陷阱：** 只测 recall · 只有 MCQ · 只看 final answer · 忽略 artifact · 单一 metric · bench 分数当 KPI
 
-若你现在就要在一个新领域启动 evaluation，50–70 题 MVP 足够验证方法论：
+</details>
 
-```
-□ 定义 5–7 个 workflow categories
-□ 每个 category 10 个 task
-□ 每 task：prompt + optional artifact + rubric（10–25 criteria）
-□ 3 位 expert 写题，2 位独立 expert 审题
-□ 跑 2 个 model pilot（强 vs 弱），确认有区分度
-□ 报告 pass@70% + mean rubric score
-□ 按 workflow / artifact / output type 切片
-```
+## MVP 落地
 
-Phase 0（scoping）→ Phase 1（50 task pilot）→ Phase 2（scale + independent validator）→ Phase 3（deployment study 闭环）。LifeSciBench 明确说：**bench 高分 ≠ 真实 research impact**，最终要用 live workflow 里的 deployment study 验证。
-
-## 常见陷阱
-
-| 陷阱 | LifeSciBench 的做法 |
-|------|---------------------|
-| 只测 knowledge recall | 测 workflow-level judgment |
-| 只有 MCQ / 结构化 QA | Free-response + rubric |
-| 只看 final answer | 平均 25 条/task 的 claim-level rubric |
-| 题目脱离真实工作 | 173 位有产业经验的 PhD 写题 |
-| 评分不可复现 | Anchor 到 verifiable answer 或 ≥90% consensus |
-| 忽略 artifact | 53% task 必须读文件 |
-| 单一 metric | Pass rate + partial credit score |
-| Bench 分数当产品 KPI | 明确 limitation，需要 deployment study |
+50–70 题即可验证：5–7 个 workflow × 每类 ~10 task → prompt + artifact + rubric（10–25 criteria）→ 3 位写题、2 位审题 → 2 个 model pilot → 报告 pass@70% + normalized score → 按维度切片。
 
 ## 写在最后
 
-1. **先定义 workflow，再写题目** — taxonomy 决定你测的是「有用」还是「会背」；知识点分类做不出 discriminating benchmark。
-2. **Rubric 是 benchmark 的核心资产** — 19,020 条 criteria 不是冗余，而是把「科学上正确」和「操作上可用」拆成可度量的 claim。
-3. **两个数字都要报** — pass rate 告诉你能不能用，rubric score 告诉你离能用还有多远；只看其中一个都会误判模型能力。
+1. **先 workflow，再题目** — taxonomy 决定场景覆盖，知识点分类做不出 discriminating benchmark。
+2. **Rubric 是核心资产** — 评分标准本身要经过专家撰写与多轮审查，不只是为 partial credit 服务。
+3. **两个数字都要报** — pass rate 说能不能用，normalized score 说离能用还有多远。
 
-LifeSciBench 本质上是把**领域专家怎么评判一份 research memo**，翻译成了可规模化的 evaluation infrastructure。这套思路不绑定生命科学——任何「结论可以多样，但 reasoning 和 caveat 有专业标准」的领域，都可以复用。
+LifeSciBench 把**领域专家怎么评判一份 research memo** 翻译成了可规模化的 evaluation infrastructure——任何「结论可多样，但 reasoning 和 caveat 有专业标准」的领域，都可以复用。
