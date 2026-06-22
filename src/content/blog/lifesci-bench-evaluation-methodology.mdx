@@ -93,16 +93,16 @@ Scientific prompt + Artifacts → Free-response → Task-specific rubric
 
 173 位 PhD（≥2 年 biotech/pharma 经验）撰写 prompt、artifacts 和 rubric。每道题入库前经历**构建期审查**和**独立 validation** 两层——前者保证单题质量，后者验证整套 benchmark 是否靠谱；**写题人与验题人必须分离**。
 
-```
-写题人起草 prompt + artifacts + rubric
-        ↓
-① self-directed automated review（写题人自驱动，平均 ~6 轮）
-        ↓
-② expert review（≥2 轮，验题人 ≠ 写题人）
-        ↓
-入库 750 task
-        ↓
-③ 独立 validation（453 人）— 评「这套 benchmark 好不好」，不参与单题撰写
+```mermaid
+flowchart TD
+    subgraph build [构建期审查]
+        A[写题人起草 prompt + artifacts + rubric]
+        B["① automated review<br/>写题人自驱动，平均 ~6 轮"]
+        C["② expert review<br/>≥2 轮，验题人 ≠ 写题人"]
+        A --> B --> C
+    end
+    C --> D[入库 750 task]
+    D --> E["③ 独立 validation<br/>453 人，不参与单题撰写"]
 ```
 
 **① automated review 是什么？** 写题人自己反复跑的质检循环：按下面四个维度查 prompt 和 rubric，有问题就改、再跑；revision 不设上限，入库题目平均约 6 轮。论文称 self-directed，但**未披露**具体用什么工具（规则检查还是 LLM 辅助）；能确定的是，它和后面的 expert review 查同一套维度，发生在专家接手之前。
