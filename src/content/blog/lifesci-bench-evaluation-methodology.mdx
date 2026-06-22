@@ -2,7 +2,7 @@
 title: "LifeSciBench 这个 Benchmark 是怎么设计的"
 description: "拆解 LifeSciBench 论文：四个 gap、分类体系设计、rubric 评分与双指标报告。"
 pubDate: 2026-06-19
-updatedDate: 2026-06-22
+updatedDate: 2026-06-23
 techDomain: ["Agent Evaluation"]
 product: ["LifeSciBench"]
 ---
@@ -93,7 +93,12 @@ Scientific prompt + Artifacts → Free-response → Task-specific rubric
 <details>
 <summary>审查维度</summary>
 
-入库前四轮审查：question-rubric consistency · scientific ambition · fact check · formatting。
+入库前按四个维度审查（automated review 与 expert review 共用这套检查项）：
+
+- **Question-rubric consistency**：题目和 rubric 要对得上——判据得是题目真正问了的，不能偷偷加题外要求；每条判据要能被客观评估。
+- **Scientific ambition**：得像真实科研工作，测多步推理和判断，不能是背诵或简单查表。
+- **Fact check**：科学结论要有附件、共识或专家判断支撑；不能过度概括，也不能表现得过分确定。
+- **Formatting**：拼写、语法、格式不能干扰理解和评分。
 
 </details>
 
@@ -101,7 +106,19 @@ Scientific prompt + Artifacts → Free-response → Task-specific rubric
 
 > 结论对但遗漏关键 assay limitation，仍是不完整；部分推理质量高但未 fully solve，也应给部分得分。
 
-Rubric 按 **claim-level** 加权——关键 flaw 权重最高。论文 Appendix C 六原则：Specificity · Atomicity · Evaluability · Grounding · Non-redundancy · Operational usefulness。评分用 automated grader + 子集 **spot-validation**。
+Rubric 按 **claim-level** 加权——关键 flaw 权重最高。写 rubric 时论文 Appendix C 要求六条原则（详见下）。评分用 **automated grader** 按 rubric 逐条给模型回答打分；再在分层抽样的子集上做 **spot-validation**——专家用同一套 rubric 独立打分，和自动评分对比相关性与 pass/fail 一致性，确认 grader 可靠。
+
+<details>
+<summary>Rubric 撰写六原则</summary>
+
+- **Specificity**：每条判据描述回答的一个具体属性，不能含糊笼统。
+- **Atomicity**：一条判据只评一个主张、计算、决策或约束。
+- **Evaluability**：单凭模型回答就能判断满足与否，不需要额外脑补。
+- **Grounding**：判据要能从 prompt、附件、公认事实或专家共识中找到依据。
+- **Non-redundancy**：同一件事不重复计分，除非评的是不同侧面。
+- **Operational usefulness**：不只评孤立正确性，还要评对这道科研决策有没有实际用处。
+
+</details>
 
 <details>
 <summary>FDA 审评 rubric 示例与 MCQ 对比</summary>
