@@ -66,7 +66,7 @@ Domain：Genomics · Chemistry/MedChem · Protein & Structural Biology · Molecu
 
 结构固定：**prompt + artifacts + rubric**。Prompt 用自然科研语言，可 intentionally open-ended；模型 **single-turn** 产出最终回答。
 
-好 task 四条：**专家真会问 · 有 grading anchor · 能区分 caveat 遗漏 · 支持 partial credit**。
+好的 task 满足：**专家真会问 · 有评分锚点 · 能区分 caveat 遗漏 · 允许部分得分**。
 
 <details>
 <summary>Task 结构与数据规模</summary>
@@ -99,7 +99,7 @@ Scientific prompt + Artifacts → Free-response → Task-specific rubric
 
 ## 第四步：Rubric 评过程，不只评 final answer
 
-> 结论对但遗漏关键 assay limitation，仍是不完整；部分推理质量高但未 fully solve，也应 partial credit。
+> 结论对但遗漏关键 assay limitation，仍是不完整；部分推理质量高但未 fully solve，也应给部分得分。
 
 Rubric 按 **claim-level** 加权——关键 flaw 权重最高。论文 Appendix C 六原则：Specificity · Atomicity · Evaluability · Grounding · Non-redundancy · Operational usefulness。评分用 automated grader + 子集 **spot-validation**。
 
@@ -117,7 +117,7 @@ Rubric 按 **claim-level** 加权——关键 flaw 权重最高。论文 Appendi
 
 | | MCQ | LifeSciBench rubric |
 |---|-----|---------------------|
-| 粒度 | 题级 0/1 | criterion 级 partial credit |
+| 粒度 | 题级 0/1 | 逐条判据、部分得分 |
 | 「差一点」 | 算错 | 50%+ score 但 pass 失败 |
 | 成本 | 低 | rubric + LLM-judge + spot-check |
 
@@ -129,59 +129,15 @@ Rubric 按 **claim-level** 加权——关键 flaw 权重最高。论文 Appendi
 
 | 指标 | 定义 | 读法 |
 |------|------|------|
-| **Normalized Score** | 得分 / 该题总分，task 等权均值 | partial credit、进步趋势 |
+| **Normalized Score** | 得分 / 该题总分，task 等权均值 | 部分得分、进步趋势 |
 | **Pass Rate** | rubric ≥ 70% 的 task 占比 | 硬门槛：算不算做对 |
 
-GPT-Rosalind 最强：**0.576 / 36.1%**（GPT-5.5：0.519 / 25.7%）。171 题（22.8%）零模型 pass——benchmark 远未饱和。**两个数字都要报**，且必须按论文的五维切片，否则 headline number 会误导。
-
-<details>
-<summary>论文里的分类体系与报告维度（别混用）</summary>
-
-LifeSciBench 论文里其实是**两套东西**：
-
-**① 数据集组织（Appendix B）—— task 怎么分类**
-
-| 维度 | 含义 | 例子 |
-|------|------|------|
-| **Workflow** | 什么类工作 | Analysis、Translation、Design… |
-| **Domain** | 哪个子领域 | Genomics、MedChem、Clinical… |
-| **证据类型** | 输入侧材料形态 | PDF、figure、sequence、SMILES、web URL… |
-
-Figure 1 概览图把分析维度简写为 workflow、domain、evidence type、**capability category**（即 rubric 按能力类型分组）。
-
-**② 结果报告（Section 5.2）—— 性能怎么切片**
-
-论文按 **workflow、biological domain、artifact setting、rubric category、answer format** 五个维度报告性能。
-
-| 报告维度 | 含义 |
-|----------|------|
-| **Workflow** | 哪类 workflow 强/弱 |
-| **Biological domain** | 哪个子领域强/弱 |
-| **Artifact setting** | text-only vs 有 attached artifact |
-| **Rubric category** | rubric criteria 按能力分组（如 mechanism explanation、experiment design） |
-| **Answer format** | 输出侧：free text、exact numeric、sequence/structure、construct… |
-
-**常见混淆：** 输出侧的 answer format 是**报告切片**维度，不是 Appendix B 分类体系的第三轴；输入侧第三轴是**证据类型**（evidence type）。
-
-</details>
-
-<details>
-<summary>维度切片数据与 benchmark 局限</summary>
-
-- **Workflow：** Translation（0.712）和 Scientific Communication（0.718）最强；Design/Optimization 和 Analysis 最难
-- **Artifact setting：** text-only 44.5% → 有 attached artifact 28.6%
-- **Answer format：** sequence/structure 成功率 18–47%；generate/construct 几乎无模型间提升
-
-**Limitation：** single-turn、self-contained task；**bench 高分 ≠ research impact**，需 deployment study 验证。
-
-**常见陷阱：** 只测 recall · 只有 MCQ · 只看 final answer · 忽略 artifact · 单一 metric · bench 分数当 KPI
-
-</details>
+GPT-Rosalind 最强：**0.576 / 36.1%**（GPT-5.5：0.519 / 25.7%）。171 题（22.8%）零模型 pass——benchmark 远未饱和。**两个数字都要报**，且必须按 workflow、domain 等维度切片，否则 headline number 会误导。
 
 ## 写在最后
 
 1. **先 workflow，再题目** — 分类体系决定场景覆盖，知识点分类做不出 discriminating benchmark。
-2. **Rubric 是核心资产** — 评分标准本身要经过专家撰写与多轮审查，不只是为 partial credit 服务。
+2. **Rubric 是核心资产** — 评分标准本身要经过专家撰写与多轮审查，不只是为部分得分服务。
 3. **两个数字都要报** — pass rate 说能不能用，normalized score 说离能用还有多远。
 
 LifeSciBench 把**领域专家怎么评判一份 research memo** 翻译成了可规模化的 evaluation infrastructure。
