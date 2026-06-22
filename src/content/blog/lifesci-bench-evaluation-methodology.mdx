@@ -1,185 +1,185 @@
 ---
-title: "如何为一个全新领域做 Evaluation"
-description: "从 LifeSciBench 论文拆解一套可复用的 evaluation 设计框架：四个 gap、五步方法与双指标报告。"
+title: "如何为一个全新领域设计评测"
+description: "从 LifeSciBench 论文拆解一套可复用的评测设计框架：四个缺口、五步方法与双指标报告。"
 pubDate: 2026-06-19
-updatedDate: 2026-06-21
+updatedDate: 2026-06-22
 techDomain: ["Agent Evaluation"]
 product: ["LifeSciBench"]
 ---
 
-当 agent 开始能写代码、读论文、帮研究员做决策时，我们关心的不是理想条件下的 recall，而是**真实工作流里能否正确推理、判断，并给出可操作的输出**。
+当 agent 开始能写代码、读论文、帮研究员做决策时，我们关心的不是理想条件下的召回率，而是**真实工作流里能否正确推理、判断，并给出可操作的输出**。
 
-[LifeSciBench](https://openai.com/index/introducing-life-sci-bench/)（[论文预印本](https://cdn.openai.com/pdf/b4299379-0a97-4ffa-8b9b-c3fbb299caa9/lifescibench_preprint.pdf)）用 **750 道专家题 + 19,020 条 rubric criteria** 做了一次完整示范：用 workflow 定义测什么，用 rubric 定义怎么评。论文指出，现有 life science eval 要么偏 factual QA，要么偏 narrow 计算分析，**几乎没有 benchmark 同时具备真实工作所需的广度与深度**。
+[LifeSciBench](https://openai.com/index/introducing-life-sci-bench/)（[论文预印本](https://cdn.openai.com/pdf/b4299379-0a97-4ffa-8b9b-c3fbb299caa9/lifescibench_preprint.pdf)）用 **750 道专家题 + 19,020 条评分准则** 做了一次完整示范：用工作流定义测什么，用评分准则定义怎么评。论文指出，现有生命科学评测要么偏事实问答，要么偏狭窄的计算分析，**几乎没有基准同时具备真实工作所需的广度与深度**。
 
-理想化 benchmark 与真实研究的 gap，论文归纳为四点：
+理想化基准与真实研究的差距，论文归纳为四点：
 
-| 考试型 benchmark 缺什么 | LifeSciBench 补什么 |
-|------------------------|---------------------|
-| 证据被裁剪成纯文本 QA | **Complex artifacts** — figure、PDF、sequence、structure… |
-| 指令精确、信息给全 | **Situational ambiguity** — 模糊 prompt、不完整证据、open-ended 粒度 |
-| 孤立知识点、窄域技能 | **Realism** — 按科学家实际 workflow 组织，跨 domain 覆盖 |
-| 单一 gold label、自动打分 | **Expert-reviewed rubrics** — 专家写 rubric，多轮 QA 审查评分标准 |
+| 考试型基准缺什么 | LifeSciBench 补什么 |
+|------------------|---------------------|
+| 证据被裁剪成纯文本问答 | **复杂附件** — 图表、PDF、序列、结构文件等 |
+| 指令精确、信息给全 | **情境模糊** — 模糊指令、不完整证据、开放式作答要求 |
+| 孤立知识点、窄域技能 | **真实性** — 按科学家实际工作流组织，跨子领域覆盖 |
+| 单一标准答案、自动打分 | **专家审查的评分准则** — 专家撰写标准，多轮质检 |
 
 <details>
-<summary>四个 gap 分别意味着什么？</summary>
+<summary>四个缺口分别意味着什么？</summary>
 
-**1. Complex artifacts** — 考试型 benchmark 从文献抽事实点改写成 QA（PubMedQA、BioASQ），模型只处理 prompt 文字；真实工作则要求读 gel figure、Visium h5、SMILES、PDF 等附件。LifeSciBench：53% task 需 artifact，1,062 个文件；有 artifact 时 GPT-Rosalind pass rate 从 44.5% 降到 28.6%。
+**1. 复杂附件** — 考试型基准从文献抽事实点改写成问答（PubMedQA、BioASQ），模型只处理提示文字；真实工作则要求读凝胶图、Visium h5、SMILES、PDF 等附件。LifeSciBench：53% 任务需附件，共 1,062 个文件；有附件时 GPT-Rosalind 通过率从 44.5% 降到 28.6%。
 
-**2. Situational ambiguity** — 考题边界清晰、信息给全；真实 prompt 常省略背景、目标模糊。LifeSciBench 刻意 open-ended：不只评对错，还评 caveat、假设、细节粒度是否到位。79% task 需多步推理（平均 4 步）。
+**2. 情境模糊** — 考题边界清晰、信息给全；真实指令常省略背景、目标模糊。LifeSciBench 刻意保持开放式：不只评对错，还评限定条件、假设、细节粒度是否到位。79% 任务需多步推理（平均 4 步）。
 
-**3. Realism** — 知识点 benchmark 场景窄；真实工作横跨 evidence handling、analysis、design、translation、communication 等。LifeSciBench 用 7 workflow × 7 biological domain 组织 750 task，taxonomy 用于分析强弱，而非把科研切成互斥单技能。
+**3. 真实性** — 知识点基准场景窄；真实工作横跨证据处理、分析、设计、转化、传播等。LifeSciBench 用 7 类工作流 × 7 个生物学子领域组织 750 道任务，分类体系用于分析强弱，而非把科研切成互斥单技能。
 
-**4. Expert-reviewed rubrics** — 难点不只是「没有唯一答案」，而是**好答案的标准必须先被专家定义并审查**。LifeSciBench 每题同时写 prompt + rubric，经 ≥2 轮 expert review，重点查 question-rubric consistency；锚定 verifiable answer 或 ≥90% consensus，平均 25 条/task 的 claim-level criteria。
+**4. 专家审查的评分准则** — 难点不只是「没有唯一答案」，而是**好答案的标准必须先被专家定义并审查**。LifeSciBench 每题同时写提示与评分准则，经 ≥2 轮专家审查，重点查题目与准则是否一致；锚定可验证答案或 ≥90% 共识，平均 25 条/任务的逐条判据。
 
 </details>
 
-LifeSciBench 针对这四个 gap 给出了系统性解法，构建方法可概括为五步。
+LifeSciBench 针对这四个缺口给出了系统性解法，构建方法可概括为五步。
 
-## 第一步：用 workflow taxonomy 定义「测什么」
+## 第一步：用工作流分类定义「测什么」
 
-不要从 textbook 章节出题，而是 **survey 从业者**，按他们实际做的工作聚类。LifeSciBench 得到 7 类 workflow × 7 个 biological domain，共 750 task——这是 **Realism** 的落地。
+不要从教材章节出题，而是**调研从业者**，按他们实际做的工作聚类。LifeSciBench 归纳出 7 类工作流 × 7 个生物学子领域，共 750 道任务——这是**真实性**原则的落地。
 
-迁移到新领域：访谈 10–30 位专家 → 按 **workflow**（不是知识点）聚类 → 以 **Workflow × Domain** 组织题目，并为每题标注 **evidence type**（输入证据形态）。
+迁移到新领域：访谈 10–30 位专家 → 按**工作流**（而非知识点）聚类 → 以**工作流 × 子领域**组织题目，并为每题标注**证据类型**（输入侧是文本、图表、序列还是结构文件等）。
 
 <details>
-<summary>7 类 workflow 与 7 个 domain</summary>
+<summary>7 类工作流与 7 个子领域</summary>
 
-| Workflow | 测什么 |
-|----------|--------|
-| Evidence handling | 提取、比较、整合论文/图表/监管文件/实验输出 |
-| Analysis | 定量、统计、计算或机制分析 |
-| Design & optimization | 分子、assay、实验、construct、protocol 设计优化 |
-| Scientific reasoning | 机制解释、假设评估、不确定性下推理 |
-| Validation & operations | 排查、质控、可行性、转化风险 |
-| Translation | 临床前证据 → 临床意义、试验设计、安全性 |
-| Scientific communication | 面向特定受众组织、解释结论 |
+| 工作流 | 测什么 |
+|--------|--------|
+| 证据处理 | 提取、比较、整合论文、图表、监管文件、实验输出 |
+| 分析 | 定量、统计、计算或机制分析 |
+| 设计与优化 | 分子、检测方法、实验、构建体、方案的设计优化 |
+| 科学推理 | 机制解释、假设评估、不确定性下推理 |
+| 验证与执行 | 排查、质控、可行性、转化风险 |
+| 转化 | 临床前证据 → 临床意义、试验设计、安全性 |
+| 科学传播 | 面向特定受众组织、解释结论 |
 
-Domain：Genomics · Chemistry/MedChem · Protein & Structural Biology · Molecular & Cell Biology · Assays & Screening · Bioinformatics/Comp Bio · Clinical/Translational Science
+子领域：基因组学 · 药物化学 · 蛋白质与结构生物学 · 分子与细胞生物学 · 检测与筛选 · 生物信息学/计算生物学 · 临床/转化科学
 
-Evidence type（输入侧标注）：Text/sequence · Figures/images · Tables/spreadsheets · PDFs/documents · Chemical/structure · Web links
+证据类型（输入侧标注）：文本/序列 · 图表/图像 · 表格 · PDF/文档 · 化学结构 · 网页链接
 
 </details>
 
-## 第二步：Task 像「给靠谱同事提需求」
+## 第二步：任务要像「给靠谱同事提需求」
 
-结构固定：**prompt + artifacts + rubric**。Prompt 用自然科研语言、可 intentionally open-ended；模型 **single-turn** 产出最终回答。
+结构固定：**提示 + 附件 + 评分准则**。提示用自然科研语言，可刻意保持开放式；模型**单轮**产出最终回答。
 
-好 task 四条：**专家真会问 · 有 grading anchor · 能区分 caveat 遗漏 · 支持 partial credit**。
+好任务四条：**专家真会问 · 有评分锚点 · 能区分对注意事项的遗漏 · 支持部分得分**。
 
 <details>
-<summary>Task 结构与数据规模</summary>
+<summary>任务结构与数据规模</summary>
 
 ```
-Scientific prompt + Artifacts → Free-response → Task-specific rubric
+科研提示 + 附件 → 自由作答 → 任务专属评分准则
 ```
 
 | 指标 | 数据 |
 |------|------|
 | 多步推理 | 79%（平均 4 步） |
-| 需 artifact | 53% |
+| 需附件 | 53% |
 | 附加文件 | 1,062 个 |
-| Rubric criteria | 平均 25 条/task |
+| 评分准则条目 | 平均 25 条/任务 |
 
-**Visium 空间转录组**（Analysis）：读 h5 附件 → 聚类注释 → 推荐治疗靶点，rubric 逐条评聚类、靶点、统计量和 caveat。**FDA 审评**（Translation）：逐项 pressure-test approval package——有核心解读，靠 reasoning 深度拉开差距。
+**Visium 空间转录组**（分析类）：读 h5 附件 → 聚类注释 → 推荐治疗靶点，评分准则逐条评聚类、靶点、统计量和注意事项。**FDA 审评**（转化类）：逐项审视批准材料——有核心解读，靠推理深度拉开差距。
 
 </details>
 
 ## 第三步：专家写题 + 独立审题
 
-173 位 PhD（≥2 年 biotech/pharma 经验）写题，453 位独立专家验题；平均 6 轮 automated review + ≥2 轮 expert review，**写题人与验题人必须分离**。
+173 位博士（≥2 年生物科技/制药经验）写题，453 位独立专家验题；平均 6 轮自动审查 + ≥2 轮专家审查，**写题人与验题人必须分离**。
 
 <details>
 <summary>审查维度</summary>
 
-入库前四轮审查：question-rubric consistency · scientific ambition · fact check · formatting。
+入库前四轮审查：题目与准则一致性 · 科学难度 · 事实核查 · 格式规范。
 
 </details>
 
-## 第四步：Rubric 评过程，不只评 final answer
+## 第四步：评分准则评过程，不只评最终答案
 
-> 结论对但遗漏关键 assay limitation，仍是不完整；部分推理质量高但未 fully solve，也应 partial credit。
+> 结论对但遗漏关键检测方法的局限，仍是不完整；部分推理质量高但未完全解出，也应给部分得分。
 
-Rubric 按 **claim-level** 加权——关键 flaw 权重最高。论文 Appendix C 六原则：Specificity · Atomicity · Evaluability · Grounding · Non-redundancy · Operational usefulness。评分用 automated grader + 子集 **spot-validation**。
+评分准则按**逐条判据**加权——关键缺陷权重最高。论文附录 C 六原则：具体性 · 原子性 · 可评估性 · 有据可依 · 不冗余 · 便于执行。评分用自动评判器 + 子集**抽样复核**。
 
 <details>
-<summary>FDA 审评 rubric 示例与 MCQ 对比</summary>
+<summary>FDA 审评评分准则示例与选择题对比</summary>
 
-| Criterion | Points |
-|-----------|--------|
-| 识别 micro-dystrophin 定量 assay 问题 | +24 |
-| 解释 expression ≠ surrogate endpoint | +22 |
-| 指出 biopsy / age-window confounding | +19 |
-| 批评 NSAA comparator 统计 | +12 |
-| 讨论 AAV durability / 免疫 / 安全 | +15 |
-| 指出 patient selection 限制 | +8 |
+| 判据 | 分值 |
+|------|------|
+| 识别 micro-dystrophin 定量检测问题 | +24 |
+| 解释表达量 ≠ 替代终点 | +22 |
+| 指出活检 / 年龄窗口混杂 | +19 |
+| 批评 NSAA 对照组统计 | +12 |
+| 讨论 AAV 持久性 / 免疫 / 安全 | +15 |
+| 指出患者入组限制 | +8 |
 
-| | MCQ | LifeSciBench rubric |
-|---|-----|---------------------|
-| 粒度 | 题级 0/1 | criterion 级 partial credit |
-| 「差一点」 | 算错 | 50%+ score 但 pass 失败 |
-| 成本 | 低 | rubric + LLM-judge + spot-check |
+| | 选择题 | LifeSciBench 评分准则 |
+|---|--------|----------------------|
+| 粒度 | 整题 0/1 | 逐条判据、部分得分 |
+| 「差一点」 | 算错 | 得分过半但判定未通过 |
+| 成本 | 低 | 准则撰写 + 大模型评判 + 抽样复核 |
 
-109 个 task：pass rate 低于 20%、rubric score 仍 ≥50%——方向对，缺关键约束。
+109 道任务：通过率低于 20%，但评分准则得分仍 ≥50%——方向对，缺关键约束。
 
 </details>
 
-## 第五步：Normalized Score + Pass Rate 双报告
+## 第五步：归一化得分 + 通过率双报告
 
 | 指标 | 定义 | 读法 |
 |------|------|------|
-| **Normalized Score** | 得分 / 该题总分，task 等权均值 | partial credit、进步趋势 |
-| **Pass Rate** | rubric ≥ 70% 的 task 占比 | 硬门槛：算不算做对 |
+| **归一化得分** | 得分 / 该题总分，任务等权均值 | 部分得分、进步趋势 |
+| **通过率** | 评分准则得分 ≥ 70% 的任务占比 | 硬门槛：算不算做对 |
 
-GPT-Rosalind 最强：**0.576 / 36.1%**（GPT-5.5：0.519 / 25.7%）。171 题（22.8%）零模型 pass——benchmark 远未饱和。**两个数字都要报**，且必须按论文的五维切片，否则 headline number 会误导。
+GPT-Rosalind 最强：**0.576 / 36.1%**（GPT-5.5：0.519 / 25.7%）。171 题（22.8%）零模型通过——基准远未饱和。**两个数字都要报**，且必须按论文的五维切片，否则总表数字会误导。
 
 <details>
-<summary>论文里的 taxonomy 与报告维度（别混用）</summary>
+<summary>论文里的分类体系与报告维度（别混用）</summary>
 
 LifeSciBench 论文里其实是**两套东西**：
 
-**① 数据集组织（Appendix B）—— task 怎么分类**
+**① 数据集组织（附录 B）—— 任务怎么分类**
 
 | 维度 | 含义 | 例子 |
 |------|------|------|
-| **Workflow** | 什么类工作 | Analysis、Translation、Design… |
-| **Domain** | 哪个子领域 | Genomics、MedChem、Clinical… |
-| **Evidence type** | **输入**证据形态 | PDF、figure、sequence、SMILES、web URL… |
+| **工作流** | 什么类工作 | 分析、转化、设计… |
+| **子领域** | 哪个方向 | 基因组学、药物化学、临床… |
+| **证据类型** | 输入侧材料形态 | PDF、图表、序列、SMILES、网页… |
 
-Figure 1 概览图把分析维度简写为 workflow、domain、evidence type、**capability category**（即 rubric 按能力类型分组）。
+图 1 概览把分析维度简写为工作流、子领域、证据类型、**能力类别**（即评分准则按能力类型分组）。
 
-**② 结果报告（Section 5.2）—— 性能怎么切片**
+**② 结果报告（第 5.2 节）—— 性能怎么切片**
 
-论文原文：*we report performance by **workflow, biological domain, artifact setting, rubric category, and answer format***。
+论文按**工作流、生物学子领域、是否含附件、评分准则类别、作答形式**五个维度报告性能。
 
 | 报告维度 | 含义 |
 |----------|------|
-| **Workflow** | 哪类 workflow 强/弱 |
-| **Biological domain** | 哪个子领域强/弱 |
-| **Artifact setting** | text-only vs 有 attached artifact |
-| **Rubric category** | rubric criteria 按能力分组（如 mechanism explanation、experiment design） |
-| **Answer format** | **输出**形态：free text、exact numeric、sequence/structure、construct… |
+| **工作流** | 哪类任务强/弱 |
+| **生物学子领域** | 哪个方向强/弱 |
+| **附件设置** | 纯文本 vs 附带文件 |
+| **评分准则类别** | 准则按能力分组（如机制解释、实验设计） |
+| **作答形式** | 输出侧：自由文本、精确数值、序列/结构、构建产物… |
 
-**常见混淆：** blog 之前写的 `Output Type` 对应论文的 **answer format**，它是**报告切片维度**，不是 Appendix B 里的 taxonomy 第三轴；输入侧第三轴是 **evidence type**。
+**常见混淆：** 输出侧的「作答形式」（论文称 answer format）是**报告切片**维度，不是附录 B 分类里的第三轴；输入侧第三轴是「证据类型」（evidence type）。
 
 </details>
 
 <details>
-<summary>维度切片数据与 benchmark 局限</summary>
+<summary>维度切片数据与基准局限</summary>
 
-- **Workflow：** Translation（0.712）和 Scientific Communication（0.718）最强；Design/Optimization 和 Analysis 最难
-- **Artifact setting：** text-only 44.5% → 有 attached artifact 28.6%
-- **Answer format：** sequence/structure 成功率 18–47%；generate/construct 几乎无模型间提升
+- **工作流：** 转化（0.712）和科学传播（0.718）最强；设计与优化、分析最难
+- **附件设置：** 纯文本 44.5% → 附带文件 28.6%
+- **作答形式：** 序列/结构类成功率 18–47%；生成/构建类几乎无模型间提升
 
-**Limitation：** single-turn、self-contained task；**bench 高分 ≠ research impact**，需 deployment study 验证。
+**局限：** 单轮、自包含任务；**基准高分 ≠ 研究影响力**，需落地研究验证。
 
-**常见陷阱：** 只测 recall · 只有 MCQ · 只看 final answer · 忽略 artifact · 单一 metric · bench 分数当 KPI
+**常见陷阱：** 只测召回 · 只有选择题 · 只看最终答案 · 忽略附件 · 单一指标 · 把基准分数当 KPI
 
 </details>
 
 ## 写在最后
 
-1. **先 workflow，再题目** — taxonomy 决定场景覆盖，知识点分类做不出 discriminating benchmark。
-2. **Rubric 是核心资产** — 评分标准本身要经过专家撰写与多轮审查，不只是为 partial credit 服务。
-3. **两个数字都要报** — pass rate 说能不能用，normalized score 说离能用还有多远。
+1. **先定工作流，再写题目** — 分类体系决定场景覆盖，按知识点分类做不出有区分度的基准。
+2. **评分准则是核心资产** — 标准本身须经专家撰写与多轮审查，不只是为部分得分服务。
+3. **两个数字都要报** — 通过率说能不能用，归一化得分说离能用还有多远。
 
-LifeSciBench 把**领域专家怎么评判一份 research memo** 翻译成了可规模化的 evaluation infrastructure——任何「结论可多样，但 reasoning 和 caveat 有专业标准」的领域，都可以复用。
+LifeSciBench 把**领域专家如何评判一份研究备忘录**翻译成了可规模化的评测基础设施——任何「结论可多样，但推理过程与注意事项有专业标准」的领域，都可以复用。
