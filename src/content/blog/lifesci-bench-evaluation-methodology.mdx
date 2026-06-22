@@ -1,6 +1,6 @@
 ---
 title: "LifeSciBench 这个 Benchmark 是怎么设计的"
-description: "拆解 LifeSciBench 论文：四个 gap、taxonomy 设计、rubric 评分与双指标报告。"
+description: "拆解 LifeSciBench 论文：四个 gap、分类体系 设计、rubric 评分与双指标报告。"
 pubDate: 2026-06-19
 updatedDate: 2026-06-22
 techDomain: ["Agent Evaluation"]
@@ -27,7 +27,7 @@ product: ["LifeSciBench"]
 
 **2. 情境模糊** — 考题边界清晰、信息给全；真实 prompt 常省略背景、目标模糊。LifeSciBench 刻意 open-ended：不只评对错，还评 caveat、假设、细节粒度是否到位。79% task 需多步推理（平均 4 步）。
 
-**3. 真实性** — 知识点 benchmark 场景窄；真实工作横跨 evidence handling、analysis、design、translation、communication 等。LifeSciBench 用 7 workflow × 7 biological domain 组织 750 task，taxonomy 用于分析强弱，而非把科研切成互斥单技能。
+**3. 真实性** — 知识点 benchmark 场景窄；真实工作横跨 evidence handling、analysis、design、translation、communication 等。LifeSciBench 用 7 workflow × 7 biological domain 组织 750 task，分类体系 用于分析强弱，而非把科研切成互斥单技能。
 
 **4. 专家审查的 rubric** — 难点不只是「没有唯一答案」，而是**好答案的标准必须先被专家定义并审查**。LifeSciBench 每题同时写 prompt + rubric，经 ≥2 轮 expert review，重点查 question-rubric consistency；锚定 verifiable answer 或 ≥90% consensus，平均 25 条/task 的 claim-level criteria。
 
@@ -35,13 +35,13 @@ product: ["LifeSciBench"]
 
 LifeSciBench 针对这四个 gap 给出了系统性解法，构建方法可概括为五步。
 
-## 第一步：用 taxonomy 定义「测什么」
+## 第一步：用 分类体系 定义「测什么」
 
 不要从 textbook 章节出题，而是 **survey 从业者**，按他们实际做的工作聚类。LifeSciBench 得到 7 类 workflow × 7 个 biological domain，每题标注 evidence type，共 750 task——这是 **真实性** 原则的落地。
 
-**为什么要按 workflow、domain、evidence type 三个维度划分？** 论文说，题目是围绕这套 taxonomy 设计的，三个轴各管一件事：**Workflow** 管「做什么类工作」——在证据处理、分析、设计、转化等通用科研能力之间取得均衡；**Domain** 管「在哪个子领域做」——确保基因组、化学、结构、临床等专长都有覆盖，而不只测某一窄域；**Evidence type** 管「输入是什么形态」——逼模型在文本、图表、序列、PDF 等材料之间切换，同时覆盖计算与实验语境。
+**为什么要按 workflow、domain、evidence type 三个维度划分？** 论文说，题目是围绕这套 分类体系 设计的，三个轴各管一件事：**Workflow** 管「做什么类工作」——在证据处理、分析、设计、转化等通用科研能力之间取得均衡；**Domain** 管「在哪个子领域做」——确保基因组、化学、结构、临床等专长都有覆盖，而不只测某一窄域；**Evidence type** 管「输入是什么形态」——逼模型在文本、图表、序列、PDF 等材料之间切换，同时覆盖计算与实验语境。
 
-这里有个容易误读的点：taxonomy **不是为了**把科研工作降维成互斥的单技能。真实 task 往往混用证据解读、机制推理、决策与科学传播；三个轴的真正用途，是提供结构化视角，看清当前模型**能做和不能做**哪些生命科学工作。
+这里有个容易误读的点：分类体系 **不是为了**把科研工作降维成互斥的单技能。真实 task 往往混用证据解读、机制推理、决策与科学传播；三个轴的真正用途，是提供结构化视角，看清当前模型**能做和不能做**哪些生命科学工作。
 
 <details>
 <summary>7 类 workflow 与 7 个 domain</summary>
@@ -135,7 +135,7 @@ Rubric 按 **claim-level** 加权——关键 flaw 权重最高。论文 Appendi
 GPT-Rosalind 最强：**0.576 / 36.1%**（GPT-5.5：0.519 / 25.7%）。171 题（22.8%）零模型 pass——benchmark 远未饱和。**两个数字都要报**，且必须按论文的五维切片，否则 headline number 会误导。
 
 <details>
-<summary>论文里的 taxonomy 与报告维度（别混用）</summary>
+<summary>论文里的 分类体系 与报告维度（别混用）</summary>
 
 LifeSciBench 论文里其实是**两套东西**：
 
@@ -161,7 +161,7 @@ Figure 1 概览图把分析维度简写为 workflow、domain、evidence type、*
 | **Rubric category** | rubric criteria 按能力分组（如 mechanism explanation、experiment design） |
 | **Answer format** | 输出侧：free text、exact numeric、sequence/structure、construct… |
 
-**常见混淆：** 输出侧的 answer format 是**报告切片**维度，不是 Appendix B taxonomy 的第三轴；输入侧第三轴是**证据类型**（evidence type）。
+**常见混淆：** 输出侧的 answer format 是**报告切片**维度，不是 Appendix B 分类体系 的第三轴；输入侧第三轴是**证据类型**（evidence type）。
 
 </details>
 
@@ -180,7 +180,7 @@ Figure 1 概览图把分析维度简写为 workflow、domain、evidence type、*
 
 ## 写在最后
 
-1. **先 workflow，再题目** — taxonomy 决定场景覆盖，知识点分类做不出 discriminating benchmark。
+1. **先 workflow，再题目** — 分类体系 决定场景覆盖，知识点分类做不出 discriminating benchmark。
 2. **Rubric 是核心资产** — 评分标准本身要经过专家撰写与多轮审查，不只是为 partial credit 服务。
 3. **两个数字都要报** — pass rate 说能不能用，normalized score 说离能用还有多远。
 
