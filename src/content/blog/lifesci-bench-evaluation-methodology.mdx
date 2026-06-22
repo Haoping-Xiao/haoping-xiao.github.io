@@ -68,8 +68,13 @@ Domain：Genomics · Chemistry/MedChem · Protein & Structural Biology · Molecu
 
 好的 task 满足：**专家真会问 · 有评分锚点 · 能区分 caveat 遗漏 · 允许部分得分**。
 
+论文附录 D 给了完整样例题。下面两例不是要报规模数字，而是用不同 workflow 展示 **task 长什么样**——prompt、artifact、rubric 如何配合，以及 rubric 为什么能评过程而不只评对错：
+
+- **Visium 空间转录组（Analysis）**：模型读 h5 附件，做聚类注释，再推荐治疗靶点。rubric 拆开评聚类、靶点、统计量和 caveat——**有附件、多步推理、逐条给分**，对应上文「有评分锚点、允许部分得分」。
+- **FDA 审评（Translation）**：逐项 pressure-test 一份批准材料，没有单一标准答案。rubric 按 assay 有效性、替代终点、对照设计等判据拉开差距——**开放作答，靠推理深度区分强弱**，也呼应第四步「不只评 final answer」。
+
 <details>
-<summary>Task 结构与数据规模</summary>
+<summary>数据规模</summary>
 
 ```
 Scientific prompt + Artifacts → Free-response → Task-specific rubric
@@ -81,8 +86,6 @@ Scientific prompt + Artifacts → Free-response → Task-specific rubric
 | 需 artifact | 53% |
 | 附加文件 | 1,062 个 |
 | Rubric criteria | 平均 25 条/task |
-
-**Visium 空间转录组**（Analysis）：读 h5 附件 → 聚类注释 → 推荐治疗靶点，rubric 逐条评聚类、靶点、统计量和 caveat。**FDA 审评**（Translation）：逐项 pressure-test approval package——有核心解读，靠 reasoning 深度拉开差距。
 
 </details>
 
