@@ -89,12 +89,30 @@ Scientific prompt + Artifacts → Free-response → Task-specific rubric
 
 </details>
 
-## 第三步：专家写题 + 独立审题
+## 第三步：专家写题 + 多轮审查
 
-173 位 PhD（≥2 年 biotech/pharma 经验）写题，453 位独立专家验题；平均 6 轮 automated review + ≥2 轮 expert review，**写题人与验题人必须分离**。
+173 位 PhD（≥2 年 biotech/pharma 经验）撰写 prompt、artifacts 和 rubric。每道题入库前经历**构建期审查**和**独立 validation** 两层——前者保证单题质量，后者验证整套 benchmark 是否靠谱；**写题人与验题人必须分离**。
+
+```
+写题人起草 prompt + artifacts + rubric
+        ↓
+① self-directed automated review（写题人自驱动，平均 ~6 轮）
+        ↓
+② expert review（≥2 轮，验题人 ≠ 写题人）
+        ↓
+入库 750 task
+        ↓
+③ 独立 validation（453 人）— 评「这套 benchmark 好不好」，不参与单题撰写
+```
+
+**① automated review 是什么？** 写题人自己反复跑的质检循环：按下面四个维度查 prompt 和 rubric，有问题就改、再跑；revision 不设上限，入库题目平均约 6 轮。论文称 self-directed，但**未披露**具体用什么工具（规则检查还是 LLM 辅助）；能确定的是，它和后面的 expert review 查同一套维度，发生在专家接手之前。
+
+**② expert review** 由与写题人无关的领域专家执行，每题至少 2 轮；锚定可验证答案或领域内 ≥90% 共识，才允许入库。
+
+**③ 独立 validation**（论文 Section 4）与单题构建流程分开：453 位专家（97% 有博士学位）评的是任务是否贴近真实科研、推理是否到位、证据是否扎实——验证的是 benchmark 整体设计，不是替写题人改 rubric。
 
 <details>
-<summary>审查维度</summary>
+<summary>审查维度（① 和 ② 共用）</summary>
 
 入库前按四个维度审查（automated review 与 expert review 共用这套检查项）：
 
