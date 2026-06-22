@@ -35,13 +35,15 @@ product: ["LifeSciBench"]
 
 LifeSciBench 针对这四个 gap 给出了系统性解法，构建方法可概括为五步。
 
-## 第一步：用 workflow taxonomy 定义「测什么」
+## 第一步：用 taxonomy 定义「测什么」
 
-不要从 textbook 章节出题，而是 **survey 从业者**，按他们实际做的工作聚类。LifeSciBench 得到 7 类 workflow × 7 个 biological domain，共 750 task——这是 **真实性** 原则的落地。
+不要从 textbook 章节出题，而是 **survey 从业者**，按他们实际做的工作聚类。LifeSciBench 得到 7 类 workflow × 7 个 biological domain，每题标注 evidence type，共 750 task——这是 **真实性** 原则的落地。
 
-**为什么要按 workflow 划分？** 论文说，题目是围绕这套 taxonomy 设计的，为的是在**通用科研能力**与**各 domain 专长**之间取得均衡；benchmark 还要同时覆盖计算与实验语境，逼模型在不同证据形态和分析模式之间切换。这里有个容易误读的点：taxonomy **不是为了**把科研工作拆成互斥的单技能——真实任务往往同时涉及证据解读、机制推理、决策与科学传播。它的真正用途，是提供一套结构化视角，看清当前模型**能做和不能做**哪些类型的生命科学工作。
+**为什么要按 workflow、domain、evidence type 三个维度划分？** 论文说，题目是围绕这套 taxonomy 设计的，三个轴各管一件事：**Workflow** 管「做什么类工作」——在证据处理、分析、设计、转化等通用科研能力之间取得均衡；**Domain** 管「在哪个子领域做」——确保基因组、化学、结构、临床等专长都有覆盖，而不只测某一窄域；**Evidence type** 管「输入是什么形态」——逼模型在文本、图表、序列、PDF 等材料之间切换，同时覆盖计算与实验语境。
 
-迁移到新领域：访谈 10–30 位专家 → 按 **workflow**（不是知识点）聚类 → 以 **Workflow × Domain** 组织题目，并为每题标注 **证据类型**（输入侧是文本、图表、序列还是结构文件等）。
+这里有个容易误读的点：taxonomy **不是为了**把科研工作降维成互斥的单技能。真实 task 往往混用证据解读、机制推理、决策与科学传播；三个轴的真正用途，是提供结构化视角，看清当前模型**能做和不能做**哪些生命科学工作。
+
+迁移到新领域：访谈 10–30 位专家 → 按 **workflow**（不是知识点）聚类 → 以 **Workflow × Domain** 组织题目，并为每题标注 **evidence type**（输入侧是文本、图表、序列还是结构文件等）。
 
 <details>
 <summary>7 类 workflow 与 7 个 domain</summary>
