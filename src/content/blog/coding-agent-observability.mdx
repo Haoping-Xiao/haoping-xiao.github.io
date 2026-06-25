@@ -75,135 +75,63 @@ session span
 
 </details>
 
-## 案例 A：Codex——默认只开 Metrics 远端
+## 案例：Codex 与 Claude Code
 
-Codex 把「数值」和「行为」拆得很干净：
+两家做法不同，但都是「埋点一次、导出分流」。下面只保留架构。
 
-| 信号 | 收集什么 | 默认去向 |
-|------|---------|---------|
-| **Metrics** | 延迟、次数、token | **Statsig**（经 OTLP） |
-| **Events** | turn、tool、plugin 等行为 | **OpenAI 自研 API** |
-| **Trace** | agent loop（turn / llm / tool 的 span 树） | 默认**不上报** |
-| **Logs** | 结构化会话事件 | 默认**不上报** |
-| **Feedback** | 用户报的 bug + 附件 | **Sentry** |
-| **本地** | 文件 / SQLite / rollout | **本机** |
+### Codex
 
-默认 TOML 很说明态度：
-
-```toml
-metrics_exporter = "statsig"   # 唯一有内置远端后端
-trace_exporter   = "none"
-exporter         = "none"      # logs
-```
-
-**架构要点：**
-
-1. **SessionTelemetry** 与业务同文件注入，不搞 `TurnService` / `InstrumentedTurnService` 双层——埋点和业务写在一起，测试时 mock 一个接口即可。
-2. **AnalyticsFact + Reducer** 聚合成事件，POST `/codex/analytics-events/events`，与 OTEL metrics 并行。
-3. **Statsig 无 SDK**：metrics 走 OTLP endpoint，不是再引一家客户端。
-4. Trace 默认关：loop 里可能带 prompt 片段、文件路径，体积和隐私都敏感；要排障时自配 OTLP 后端即可。
+| 信号 | 默认去向 |
+|------|---------|
+| Metrics | Statsig（OTLP） |
+| Events | 自研 HTTP API |
+| Trace / Logs | 不上报（可自配 OTLP） |
+| Feedback | Sentry |
+| 本地 | 文件 / SQLite / rollout |
 
 ```
-业务（run_turn / run_tool）
-    │
-    ├─ SessionTelemetry ──────► OTEL Metrics ──OTLP──► Statsig
-    ├─ agent loop span ───────► OTEL Trace ──OTLP──► 可配（默认关）
-    ├─ tracing event ─────────► OTEL Logs ──OTLP──► 可配（默认关）
-    ├─ AnalyticsFact ─Reducer─► POST /codex/analytics-events/events
-    └─ CodexFeedback ─────────► Sentry
+run_turn / run_tool
+    ├─ SessionTelemetry ──► OTEL Metrics ──OTLP──► Statsig
+    ├─ agent loop span ───► OTEL Trace  ──OTLP──► 可配（默认关）
+    ├─ tracing event ─────► OTEL Logs   ──OTLP──► 可配（默认关）
+    ├─ AnalyticsFact ─────► POST /codex/analytics-events/events
+    └─ CodexFeedback ─────► Sentry
 ```
 
-**Takeaway：** 远端默认只有 metrics 有「官方后端」；行为走 HTTP events；个案走 Sentry；深度排障靠本地或自配 OTLP。
+远端默认只开 Metrics；Events、Feedback、本地各走一路。
 
-## 案例 B：Claude Code——Analytics 默认开，Telemetry 分场景
+### Claude Code
 
-Claude Code 用**两条命名清晰的管道**，比「全叫 telemetry」更易推理：
+两条管道，名字分开：
 
-### 管道 A：Analytics（默认开启）
-
-`logEvent()` 在代码库里有 **400+ 调用点**，覆盖 hooks、tools、api、入口——这是产品行为的主通道。
+**Analytics（默认开）** — 行为事件，`logEvent()` 广撒网：
 
 ```
-[业务: hooks / tools / api / main.tsx ...]
-              │
-              │  logEvent('tengu_xxx', { count: 1, ... })
-              ▼
-    ┌─────────────────────┐
-    │  analytics/index.ts │
-    │  sink 已挂载？       │
-    └─────────┬───────────┘
-              │
-    ┌─────────┴─────────┐
-    │ 否                 │ 是
-    ▼                    ▼
- eventQueue[]      sink.ts（采样 → 双路分发）
- 启动前缓存              │
-    │ attach 后 drain    ▼
-    └──────────► metadata.ts（统一 enrichment）
-                        │
-          ┌─────────────┴─────────────┐
-          ▼                           ▼
-    Datadog（白名单事件）      1P Event Logger
-    axios → Logs API          OTEL sdk-logs + 自定义 Exporter
-                                        │
-                                        ▼
-                          POST /api/event_logging/batch
-                          (Protobuf: ClaudeCodeInternalEvent)
-                                        │
-                                        ▼
-                                   [ BigQuery ]
+hooks / tools / api
+    │ logEvent('tengu_xxx')
+    ▼
+analytics/index → sink（采样）→ metadata（enrichment）
+    ├─► Datadog Logs（白名单）
+    └─► POST /api/event_logging/batch → BigQuery
 ```
 
-**设计细节值得学：**
-
-- **启动前 eventQueue**：sink 未 attach 时先缓存，attach 后 drain，避免丢早期事件。
-- **metadata.ts 统一 enrichment**：业务只传 `tengu_xxx` + 载荷，版本、环境、会话上下文在一处补齐。
-- **双路分发**：部分事件进 Datadog Logs（白名单），全量或主路径进自研 Protobuf batch → BigQuery——**同一埋点，多个 sink，由配置和采样决定**，业务无感。
-
-### 管道 B：Telemetry（需 `CLAUDE_CODE_ENABLE_TELEMETRY=1`）
-
-OTEL 三件套：**Meter（7 个 Counter）**、**Logger**、**Tracer（sessionTracing，包 whole session 的 loop）**，入口还有 `logOTelEvent()`。
+**Telemetry（需 `CLAUDE_CODE_ENABLE_TELEMETRY=1`）** — OTEL metrics / trace / logs：
 
 ```
-[业务: run_turn / run_tool]
-    ├── logOTelEvent()
-    ├── OTEL Meter (Counters)
-    └── OTEL Span (sessionTracing)  ← loop 父子关系
-              ▼
-    instrumentation.ts（Meter / Logger / Tracer Provider）
-              │
-    ┌─────────┼─────────┐
-    ▼         ▼         ▼
- 用户 OTLP   BigQuery    Beta Tracing
- (自建 DD)   /metrics    loop 高敏追踪端点
+run_turn / run_tool
+    ├─ OTEL Meter  ──┐
+    ├─ OTEL Span   ──┼─► instrumentation.ts ──► OTLP / BigQuery / beta 端点
+    └─ OTEL Logger ──┘
 ```
 
-`sessionTracing` 管的正是 **agent loop 记录**：session 下挂 turn，turn 下挂每次 llm 调用和 tool 执行，方便看「卡在第几轮、哪个 tool 慢」。与 Codex 类似，**metrics / trace 不是默认全开的远端洪水**；企业场景（C4E/Teams）可自动走 BigQuery metrics；高敏 loop trace 走单独 beta 端点。
+Trace 走 `sessionTracing`，记 session → turn → llm / tool 的 loop 树。错误另落本地 `~/.claude/errors/*.jsonl`，不上报。
 
-### 本地 only
-
-| 去向 | 用途 |
-|------|------|
-| `errorLogSink` → `~/.claude/errors/*.jsonl` | 错误留档，不上报 |
-| Perfetto（ant-only）→ `~/.claude/traces/*.json` | 性能追踪，本机分析 |
-
-这和 Codex 的本地 SQLite / rollout 回放是同一类：**给开发者和支持同学握把螺丝刀，不默认进公司数仓。**
-
-## 对照：两种哲学，一张表
-
-| 维度 | Codex | Claude Code |
-|------|-------|-------------|
-| 行为事件 | AnalyticsFact → 自研 HTTP API | `logEvent` → sink 双路（1P + Datadog 白名单） |
-| 数值指标 | OTEL Metrics → Statsig（默认开） | OTEL Meter → 可选 + BigQuery（企业） |
-| Trace（agent loop） | OTEL span 树，默认关 | `sessionTracing`，需 env 开启 |
-| Logs | 结构化会话事件，默认关 | OTEL Logger，需 env 开启 |
-| 用户反馈 | Sentry SDK | （文中未强调同级 Feedback 线；错误有本地 jsonl） |
-| 默认远端 | 仅 Metrics 有内置后端 | Analytics 默认开；Telemetry 显式开关 |
-| 埋点风格 | SessionTelemetry 与业务同模块 | `logEvent` 广撒网 + 独立 instrumentation |
-
-**共同点：** 都不是「五个信号五个厂商 SDK」；OTEL 覆盖 metrics/trace/logs 的采集层；Events 多用 **HTTP + 自有 schema**；Feedback / 错误与自动遥测分列。
-
-**差异：** Codex 更激进地 **默认关 trace/logs 远端**；Claude Code 把 **Analytics 当作一等公民默认开**，Telemetry 作为增强层；CC 在 analytics 层就做 **采样 + 多 sink**，Codex 在 events 与 metrics 层物理分离。
+| | Codex | Claude Code |
+|--|-------|-------------|
+| 行为 | AnalyticsFact → HTTP | `logEvent` → Analytics 管道 |
+| 数值 | OTEL → Statsig（默认开） | OTEL Meter（opt-in） |
+| Loop Trace | OTEL span（默认关） | sessionTracing（opt-in） |
+| 默认远端 | 仅 Metrics | Analytics |
 
 ## 自己设计 agent 可观测时：怎么选
 
