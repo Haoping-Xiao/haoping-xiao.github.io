@@ -22,9 +22,7 @@ Coding agent 的可观测性，本质上是在回答五个不同的问题：
 | **Logs** | 会话里发生了什么结构化事实？ | turn 状态变迁、配置快照 | 值班、审计、事后复盘 |
 | **Feedback** | 用户主动报的个案 | bug 描述、截图、附件 | 客服、质量、个案追踪 |
 
-**记一句：** Metrics 看曲线，Events 看行为，**Trace 看 agent loop 怎么转**，Logs 看事实，Feedback 看个案——**用途不同，默认开关和后端也往往不同**，别指望一个 PostHog 或一个 Datadog 全包。
-
-Trace 和 Events 最容易混：Events 记「用户触发了 shell、turn 完成了」这类**业务事实**；Trace 记的是 **loop 内部的父子步骤**——哪次 model 调用、哪次 tool、各花了多久。不是微服务之间跳来跳去的分布式链路，而是**单进程里一轮 turn 的迭代结构**。
+**记一句：** Metrics 看曲线，Events 看行为，**Trace 看 agent loop 怎么转**，Logs 看事实，Feedback 看个案。
 
 本地还有一条隐含的第六类：**文件 / SQLite / rollout 回放**，只落本机、不上报，用于调试与复现。它和远端遥测是互补，不是替代。
 
