@@ -43,13 +43,6 @@ Coding agent 的可观测性，本质上是在回答五个不同的问题：
     └─ 本地 store ─────────────────────────► 本机文件 / SQLite（调试回放）
 ```
 
-**两条主路最容易混：**
-
-- **Metrics**：`codex.turn.ttft.duration_ms=120` → 画曲线、算 P99、做告警
-- **Events**：`CodexTurnEvent { status: completed, tool: shell }` → 看用户路径、功能采用
-
-前者是数值聚合，后者是带 schema 的行为事实。Statsig 在 Codex 里**只接 metrics**；Claude Code 的 `logEvent('tengu_xxx')` 走自研 batch API——都不是对方的替代品。
-
 <details>
 <summary>OTEL / OTLP 前置：三个词、三个 URL</summary>
 
