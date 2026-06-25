@@ -126,55 +126,13 @@ run_turn / run_tool
 
 Trace 走 `sessionTracing`，记 session → turn → llm / tool 的 loop 树。错误另落本地 `~/.claude/errors/*.jsonl`，不上报。
 
-| | Codex | Claude Code |
-|--|-------|-------------|
-| 行为 | AnalyticsFact → HTTP | `logEvent` → Analytics 管道 |
-| 数值 | OTEL → Statsig（默认开） | OTEL Meter（opt-in） |
-| Loop Trace | OTEL span（默认关） | sessionTracing（opt-in） |
-| 默认远端 | 仅 Metrics | Analytics |
+**对比：** Codex 默认只开 Metrics 远端；Claude Code 默认开 Analytics，Telemetry 需手动开。两家都把 loop Trace 留给 opt-in。
 
-## 自己设计 agent 可观测时：怎么选
+## 自己设计时
 
-### 1. 先定默认开关策略
-
-| 策略 | 适用 | 风险 |
-|------|------|------|
-| 默认只开 Metrics + 聚合 Events | 消费级 CLI、隐私敏感 | 深度链路排障要靠用户自配或本地 |
-| Analytics 默认开、Telemetry opt-in | 需要快速看产品漏斗 | 需做好采样、PII 脱敏、退出机制 |
-| 全量 OTLP 默认开 | 企业内网、统一 Observability 平台 | 成本、合规、终端体积 |
-
-Coding agent 的 loop 里夹着 **prompt 片段、文件路径、tool 输出**，全量 loop trace 默认上报往往不可接受；两家都选择 **Events/Metrics 先行，loop Trace 谨慎开启**。
-
-### 2. 埋点放哪：跟业务走，不要装饰器地狱
-
-两家都避免「纯装饰器包装一整条服务链」作为唯一手段：
-
-- 在 `run_turn`、`run_tool`、hook 入口旁注入 telemetry 接口
-- 单元测试 mock 同一接口
-- enrichment（版本、环境、session）集中在 metadata / reducer 层
-
-### 3. Exporter 配置与业务解耦
-
-```
-        ┌── OTLP ──► Statsig / 自建      (metrics)
-tracing + OTEL ─┼── OTLP ──► Datadog       (trace，需配置)
-        └── OTLP ──► Collector             (logs，需配置)
-
-analytics ── HTTP POST ──► 自研 API         (events)
-feedback  ── Sentry SDK ─► Sentry           (个案)
-```
-
-你以为要接五个 SDK；实际上 **tracing + OTEL 一套 + HTTP events + 个案 SDK**，再加本地文件。
-
-### 4. Events schema 要稳定
-
-无论是 `CodexTurnEvent` 还是 `ClaudeCodeInternalEvent`（Protobuf），行为管道都需要：
-
-- 稳定 event name（如 `tengu_xxx`、`codex.turn.completed`）
-- Reducer 或 batch 聚合，避免每个 keystroke 一次 HTTP
-- 启动队列 + attach 模式，防止丢事件
-
-Metrics 用 histogram / counter 即可，不要把高基数字段（如完整文件路径）打进 label。
+- **默认开关**：Metrics + Events 先开；loop Trace、全量 Logs 默认关，用户或企业自配。
+- **埋点位置**：`run_turn` / `run_tool` 旁注入；版本、环境等 enrichment 集中一层，业务只传事实。
+- **导出分流**：OTEL 收 metrics / trace / logs，Events 走 HTTP batch，Feedback 走 Sentry；换后端改 Exporter，不改业务代码。
 
 ## 常见陷阱
 
