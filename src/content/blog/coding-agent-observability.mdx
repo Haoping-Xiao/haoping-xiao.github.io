@@ -24,8 +24,6 @@ Coding agent 的可观测性，本质上是在回答五个不同的问题：
 
 **记一句：** Metrics 看曲线，Events 看行为，**Trace 看 agent loop 怎么转**，Logs 看事实，Feedback 看个案。
 
-本地还有一条隐含的第六类：**文件 / SQLite / rollout 回放**，只落本机、不上报，用于调试与复现。它和远端遥测是互补，不是替代。
-
 ## 行业共识：埋点一次，导出分流
 
 成熟做法的共同点是：**业务只表达「发生了什么」，去向由 Exporter / Sink 配置决定**，而不是在 `run_turn` 里写 `if statsig ... else sentry ...`。
