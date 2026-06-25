@@ -1,0 +1,262 @@
+---
+title: "Coding Agent 可观测性：该收什么、怎么分流"
+description: "从 Codex 与 Claude Code 两条真实管线出发，理解 agent 的 metrics / events / trace 该各管什么，以及为何「埋点一次、导出分流」比堆 SDK 更稳。"
+pubDate: 2026-06-25
+techDomain: ["Agent Infra"]
+product: ["Codex", "Claude Code"]
+---
+
+当 coding agent 从「偶尔调 API」变成「常驻终端、改仓库、跑 shell」时，工程问题不再是「能不能打出一条 log」，而是：**同一轮 turn 里，产品要看行为漏斗、SRE 要看 P99 延迟、安全要看敏感链路、用户报 bug 时要能挂上现场——这些信号能不能各走各的路，又不让业务代码变成 if/else 选厂商？**
+
+这篇用 Codex 与 Claude Code 两条已落地的管线做对照，归纳当下 coding agent 可观测性的常见分法：**收什么、埋在哪、怎么导出**。读完后你能判断：该用 OTEL 还是自研 event API、默认开什么、以及哪里不该混成一条管道。
+
+## 先划边界：五类信号，五个问题
+
+Coding agent 的可观测性，本质上是在回答五个不同的问题：
+
+| 信号 | 回答的问题 | 典型内容 | 谁最关心 |
+|------|-----------|---------|---------|
+| **Metrics** | 快不快、稳不稳、贵不贵？ | 延迟、次数、token 用量、错误率 | SRE、成本、容量规划 |
+| **Events** | 用户干了什么、漏斗走到哪？ | turn 完成、tool 调用、插件启用 | 产品、增长、功能采用率 |
+| **Trace** | 一次请求里各段耗时、父子关系？ | span 树、跨服务调用链 | 性能排障、链路归因 |
+| **Logs** | 会话里发生了什么结构化事实？ | turn 状态变迁、配置快照 | 值班、审计、事后复盘 |
+| **Feedback** | 用户主动报的个案 | bug 描述、截图、附件 | 客服、质量、个案追踪 |
+
+**记一句：** Metrics 看曲线，Events 看行为，Trace 看链路，Logs 看事实，Feedback 看个案——**用途不同，默认开关和后端也往往不同**，别指望一个 PostHog 或一个 Datadog 全包。
+
+本地还有一条隐含的第六类：**文件 / SQLite / rollout 回放**，只落本机、不上报，用于调试与复现。它和远端遥测是互补，不是替代。
+
+## 行业共识：埋点一次，导出分流
+
+成熟做法的共同点是：**业务只表达「发生了什么」，去向由 Exporter / Sink 配置决定**，而不是在 `run_turn` 里写 `if statsig ... else sentry ...`。
+
+```
+业务代码（run_turn / run_tool / hooks）
+    │
+    ├─ SessionTelemetry / OTEL Meter ──OTLP──► Metrics 后端（曲线、告警）
+    │
+    ├─ tracing span / structured log ──OTLP──► Trace / Logs 后端（默认常关）
+    │
+    ├─ AnalyticsFact / logEvent() ──HTTP──► 自研 Event API（行为分析）
+    │
+    ├─ CodexFeedback / errorLogSink ───────► Sentry / 本地 jsonl（个案与错误）
+    │
+    └─ 本地 store ─────────────────────────► 本机文件 / SQLite（调试回放）
+```
+
+**两条主路最容易混：**
+
+- **Metrics**：`codex.turn.ttft.duration_ms=120` → 画曲线、算 P99、做告警
+- **Events**：`CodexTurnEvent { status: completed, tool: shell }` → 看用户路径、功能采用
+
+前者是数值聚合，后者是带 schema 的行为事实。Statsig 在 Codex 里**只接 metrics**；Claude Code 的 `logEvent('tengu_xxx')` 走自研 batch API——都不是对方的替代品。
+
+<details>
+<summary>OTEL / OTLP 前置：三个词、三个 URL</summary>
+
+| 词 | 人话 |
+|----|------|
+| **OTEL** | 开放标准 + SDK，在进程内整理 span / metric / log |
+| **OTLP** | 发送协议，通常 HTTP POST 到后端 |
+| **Resource** | 每批数据的「身份证」：`service.name`、`environment`（三种信号共用） |
+
+三条出口，三个 URL：
+
+```
+/v1/traces   ← span 树
+/v1/metrics  ← counter / histogram
+/v1/logs     ← 结构化 log 事件
+```
+
+进程启动时配一次 Provider，业务里只埋点；换后端改 Exporter，不动业务代码。Codex（Rust）走 `tracing` → `tracing-opentelemetry` → OTEL SDK → OTLP；Claude Code（TS）在 Telemetry 管道里挂 `MeterProvider` / `LoggerProvider` / `TracerProvider`，是同一套心智模型。
+
+</details>
+
+## 案例 A：Codex——默认只开 Metrics 远端
+
+Codex 把「数值」和「行为」拆得很干净：
+
+| 信号 | 收集什么 | 默认去向 |
+|------|---------|---------|
+| **Metrics** | 延迟、次数、token | **Statsig**（经 OTLP） |
+| **Events** | turn、tool、plugin 等行为 | **OpenAI 自研 API** |
+| **Trace** | 调用链 | 默认**不上报** |
+| **Logs** | 结构化会话事件 | 默认**不上报** |
+| **Feedback** | 用户报的 bug + 附件 | **Sentry** |
+| **本地** | 文件 / SQLite / rollout | **本机** |
+
+默认 TOML 很说明态度：
+
+```toml
+metrics_exporter = "statsig"   # 唯一有内置远端后端
+trace_exporter   = "none"
+exporter         = "none"      # logs
+```
+
+**架构要点：**
+
+1. **SessionTelemetry** 与业务同文件注入，不搞 `TurnService` / `InstrumentedTurnService` 双层——埋点和业务写在一起，测试时 mock 一个接口即可。
+2. **AnalyticsFact + Reducer** 聚合成事件，POST `/codex/analytics-events/events`，与 OTEL metrics 并行。
+3. **Statsig 无 SDK**：metrics 走 OTLP endpoint，不是再引一家客户端。
+4. Trace / Logs 要自建 Collector 或 Datadog 等，需显式开 OTLP；默认关是为隐私与体积。
+
+```
+业务（run_turn / run_tool）
+    │
+    ├─ SessionTelemetry ──────► OTEL Metrics ──OTLP──► Statsig
+    ├─ tracing span/event ────► OTEL Trace/Logs ─OTLP─► 可配（默认关）
+    ├─ AnalyticsFact ─Reducer─► POST /codex/analytics-events/events
+    └─ CodexFeedback ─────────► Sentry
+```
+
+**Takeaway：** 远端默认只有 metrics 有「官方后端」；行为走 HTTP events；个案走 Sentry；深度排障靠本地或自配 OTLP。
+
+## 案例 B：Claude Code——Analytics 默认开，Telemetry 分场景
+
+Claude Code 用**两条命名清晰的管道**，比「全叫 telemetry」更易推理：
+
+### 管道 A：Analytics（默认开启）
+
+`logEvent()` 在代码库里有 **400+ 调用点**，覆盖 hooks、tools、api、入口——这是产品行为的主通道。
+
+```
+[业务: hooks / tools / api / main.tsx ...]
+              │
+              │  logEvent('tengu_xxx', { count: 1, ... })
+              ▼
+    ┌─────────────────────┐
+    │  analytics/index.ts │
+    │  sink 已挂载？       │
+    └─────────┬───────────┘
+              │
+    ┌─────────┴─────────┐
+    │ 否                 │ 是
+    ▼                    ▼
+ eventQueue[]      sink.ts（采样 → 双路分发）
+ 启动前缓存              │
+    │ attach 后 drain    ▼
+    └──────────► metadata.ts（统一 enrichment）
+                        │
+          ┌─────────────┴─────────────┐
+          ▼                           ▼
+    Datadog（白名单事件）      1P Event Logger
+    axios → Logs API          OTEL sdk-logs + 自定义 Exporter
+                                        │
+                                        ▼
+                          POST /api/event_logging/batch
+                          (Protobuf: ClaudeCodeInternalEvent)
+                                        │
+                                        ▼
+                                   [ BigQuery ]
+```
+
+**设计细节值得学：**
+
+- **启动前 eventQueue**：sink 未 attach 时先缓存，attach 后 drain，避免丢早期事件。
+- **metadata.ts 统一 enrichment**：业务只传 `tengu_xxx` + 载荷，版本、环境、会话上下文在一处补齐。
+- **双路分发**：部分事件进 Datadog Logs（白名单），全量或主路径进自研 Protobuf batch → BigQuery——**同一埋点，多个 sink，由配置和采样决定**，业务无感。
+
+### 管道 B：Telemetry（需 `CLAUDE_CODE_ENABLE_TELEMETRY=1`）
+
+OTEL 三件套：**Meter（7 个 Counter）**、**Logger**、**Tracer（sessionTracing）**，入口还有 `logOTelEvent()`。
+
+```
+[业务]
+    ├── logOTelEvent()
+    ├── OTEL Meter (Counters)
+    └── OTEL Span (sessionTracing)
+              ▼
+    instrumentation.ts（Meter / Logger / Tracer Provider）
+              │
+    ┌─────────┼─────────┐
+    ▼         ▼         ▼
+ 用户 OTLP   BigQuery    Beta Tracing
+ (自建 DD)   /metrics    高敏链路端点
+```
+
+与 Codex 类似：**metrics / trace 不是默认全开的远端洪水**；企业场景（C4E/Teams）可自动走 BigQuery metrics；高敏 beta tracing 单独端点。
+
+### 本地 only
+
+| 去向 | 用途 |
+|------|------|
+| `errorLogSink` → `~/.claude/errors/*.jsonl` | 错误留档，不上报 |
+| Perfetto（ant-only）→ `~/.claude/traces/*.json` | 性能追踪，本机分析 |
+
+这和 Codex 的本地 SQLite / rollout 回放是同一类：**给开发者和支持同学握把螺丝刀，不默认进公司数仓。**
+
+## 对照：两种哲学，一张表
+
+| 维度 | Codex | Claude Code |
+|------|-------|-------------|
+| 行为事件 | AnalyticsFact → 自研 HTTP API | `logEvent` → sink 双路（1P + Datadog 白名单） |
+| 数值指标 | OTEL Metrics → Statsig（默认开） | OTEL Meter → 可选 + BigQuery（企业） |
+| Trace / Logs | OTEL，默认关 | OTEL Telemetry 管道，需 env 开启 |
+| 用户反馈 | Sentry SDK | （文中未强调同级 Feedback 线；错误有本地 jsonl） |
+| 默认远端 | 仅 Metrics 有内置后端 | Analytics 默认开；Telemetry 显式开关 |
+| 埋点风格 | SessionTelemetry 与业务同模块 | `logEvent` 广撒网 + 独立 instrumentation |
+
+**共同点：** 都不是「五个信号五个厂商 SDK」；OTEL 覆盖 metrics/trace/logs 的采集层；Events 多用 **HTTP + 自有 schema**；Feedback / 错误与自动遥测分列。
+
+**差异：** Codex 更激进地 **默认关 trace/logs 远端**；Claude Code 把 **Analytics 当作一等公民默认开**，Telemetry 作为增强层；CC 在 analytics 层就做 **采样 + 多 sink**，Codex 在 events 与 metrics 层物理分离。
+
+## 自己设计 agent 可观测时：怎么选
+
+### 1. 先定默认开关策略
+
+| 策略 | 适用 | 风险 |
+|------|------|------|
+| 默认只开 Metrics + 聚合 Events | 消费级 CLI、隐私敏感 | 深度链路排障要靠用户自配或本地 |
+| Analytics 默认开、Telemetry opt-in | 需要快速看产品漏斗 | 需做好采样、PII 脱敏、退出机制 |
+| 全量 OTLP 默认开 | 企业内网、统一 Observability 平台 | 成本、合规、终端体积 |
+
+Coding agent 处理的是**用户代码路径和 prompt 上下文**，全量 trace 默认上报往往不可接受；两家都选择 **Events/Metrics 先行，Trace 谨慎**。
+
+### 2. 埋点放哪：跟业务走，不要装饰器地狱
+
+两家都避免「纯装饰器包装一整条服务链」作为唯一手段：
+
+- 在 `run_turn`、`run_tool`、hook 入口旁注入 telemetry 接口
+- 单元测试 mock 同一接口
+- enrichment（版本、环境、session）集中在 metadata / reducer 层
+
+### 3. Exporter 配置与业务解耦
+
+```
+        ┌── OTLP ──► Statsig / 自建      (metrics)
+tracing + OTEL ─┼── OTLP ──► Datadog       (trace，需配置)
+        └── OTLP ──► Collector             (logs，需配置)
+
+analytics ── HTTP POST ──► 自研 API         (events)
+feedback  ── Sentry SDK ─► Sentry           (个案)
+```
+
+你以为要接五个 SDK；实际上 **tracing + OTEL 一套 + HTTP events + 个案 SDK**，再加本地文件。
+
+### 4. Events schema 要稳定
+
+无论是 `CodexTurnEvent` 还是 `ClaudeCodeInternalEvent`（Protobuf），行为管道都需要：
+
+- 稳定 event name（如 `tengu_xxx`、`codex.turn.completed`）
+- Reducer 或 batch 聚合，避免每个 keystroke 一次 HTTP
+- 启动队列 + attach 模式，防止丢事件
+
+Metrics 用 histogram / counter 即可，不要把高基数字段（如完整文件路径）打进 label。
+
+## 常见陷阱
+
+| 陷阱 | 后果 | 修复 |
+|------|------|------|
+| 用 Metrics 后端存行为事件 | 无法漏斗分析、label 爆炸 | Events 走自研 API 或 Logs 型分析库 |
+| 业务里按环境 if 选 Datadog/Statsig | 测试困难、漏报 | Exporter 配置分流 |
+| Trace 默认全量上报 | 合规风险、账单爆炸 | 默认关 + 采样 + 敏感链路单独端点 |
+| 没有本地留档 | 用户报 bug 无现场 | jsonl / SQLite / rollout 回放 |
+| `logEvent` 与 OTEL log 混为一个概念 | 团队沟通成本、重复埋点 | 文档里命名两条管道（Analytics vs Telemetry） |
+
+## 写在最后
+
+1. **五类信号五道题**——先弄清谁在问什么，再选 Metrics、Events、Trace、Logs 或 Feedback；不要一个 Dashboard 答所有题。
+2. **埋点一次、导出分流**——业务表达事实，OTEL + HTTP sink 决定去向；换厂商改配置，不改 `run_turn`。
+3. **默认保守、可加深**——远端默认 Metrics（+ 行为 Events）常见；Trace/全量 Logs 交给用户或企业自配；本地文件是安全网。
+
+Codex 与 Claude Code 路径不同，但都指向同一件事：**agent 的可观测性不是「接满监控大盘」，而是把产品行为、SLO 数值、个案反馈和本地复现拆成可独立演进的几条管**——你在设计自己的 coding agent 时，按这张表对齐默认开关和 schema，比先选.vendor 名单更重要。
