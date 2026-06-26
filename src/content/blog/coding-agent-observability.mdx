@@ -28,19 +28,21 @@ Coding agent 的可观测性，本质上是在回答五个不同的问题：
 
 成熟做法的共同点是：**业务只表达「发生了什么」，去向由 Exporter / Sink 配置决定**，而不是在 `run_turn` 里写 `if statsig ... else sentry ...`。
 
-```
-业务代码（run_turn / run_tool / hooks）
-    │
-    ├─ SessionTelemetry / OTEL Meter ──OTLP──► Metrics 后端（曲线、告警）
-    │
-    ├─ agent loop span（turn/tool/llm）─OTLP──► Trace 后端（默认常关）
-    ├─ structured log ───────────────OTLP──► Logs 后端（默认常关）
-    │
-    ├─ AnalyticsFact / logEvent() ──HTTP──► 自研 Event API（行为分析）
-    │
-    ├─ CodexFeedback / errorLogSink ───────► Sentry / 本地 jsonl（个案与错误）
-    │
-    └─ 本地 store ─────────────────────────► 本机文件 / SQLite（调试回放）
+```mermaid
+flowchart TB
+    Biz["业务代码<br/>run_turn / run_tool / hooks"]
+    Biz --> M["SessionTelemetry / OTEL Meter"]
+    M -->|OTLP| Metrics["Metrics 后端"]
+    Biz --> T["agent loop span<br/>turn / tool / llm"]
+    T -->|OTLP| Trace["Trace 后端<br/>默认关"]
+    Biz --> L["structured log"]
+    L -->|OTLP| Logs["Logs 后端<br/>默认关"]
+    Biz --> E["AnalyticsFact / logEvent()"]
+    E -->|HTTP| Events["自研 Event API"]
+    Biz --> F["CodexFeedback / errorLogSink"]
+    F --> Feedback["Sentry / 本地 jsonl"]
+    Biz --> Local["本地 store"]
+    Local --> Store["本机文件 / SQLite"]
 ```
 
 <details>
@@ -54,21 +56,22 @@ Coding agent 的可观测性，本质上是在回答五个不同的问题：
 
 三条出口，三个 URL：
 
-```
-/v1/traces   ← agent loop 的 span 树（turn 包 model 包 tool）
-/v1/metrics  ← counter / histogram
-/v1/logs     ← 结构化 log 事件
+```mermaid
+flowchart LR
+    OTEL["OTEL SDK"] -->|/v1/traces| Traces["agent loop span 树"]
+    OTEL -->|/v1/metrics| Metrics["counter / histogram"]
+    OTEL -->|/v1/logs| Logs["结构化 log 事件"]
 ```
 
 在 coding agent 里，Trace 的 span 通常长这样：
 
-```
-session span
-└─ turn span
-   ├─ llm span（ttft、token）
-   ├─ tool:shell span
-   ├─ llm span
-   └─ tool:grep span
+```mermaid
+flowchart TD
+    S["session span"] --> T["turn span"]
+    T --> L1["llm span<br/>ttft / token"]
+    T --> TS["tool:shell span"]
+    T --> L2["llm span"]
+    T --> TG["tool:grep span"]
 ```
 
 进程启动时配一次 Provider，在 `run_turn` / `run_tool` 入口挂 span；换后端改 Exporter，不动业务代码。Codex（Rust）走 `tracing::info_span!` → `tracing-opentelemetry` → OTEL SDK → OTLP；Claude Code 的 `sessionTracing` 同理，是同一套心智模型。
@@ -89,13 +92,22 @@ session span
 | Feedback | Sentry |
 | 本地 | 文件 / SQLite / rollout |
 
-```
-run_turn / run_tool
-    ├─ SessionTelemetry ──► OTEL Metrics ──OTLP──► Statsig
-    ├─ agent loop span ───► OTEL Trace  ──OTLP──► 可配（默认关）
-    ├─ tracing event ─────► OTEL Logs   ──OTLP──► 可配（默认关）
-    ├─ AnalyticsFact ─────► POST /codex/analytics-events/events
-    └─ CodexFeedback ─────► Sentry
+```mermaid
+flowchart TB
+    Biz["run_turn / run_tool"]
+    Biz --> ST["SessionTelemetry"]
+    ST --> OM["OTEL Metrics"]
+    OM -->|OTLP| Statsig["Statsig"]
+    Biz --> Span["agent loop span"]
+    Span --> OT["OTEL Trace"]
+    OT -->|OTLP| TraceOut["可配<br/>默认关"]
+    Biz --> TE["tracing event"]
+    TE --> OL["OTEL Logs"]
+    OL -->|OTLP| LogsOut["可配<br/>默认关"]
+    Biz --> AF["AnalyticsFact"]
+    AF --> API["POST /codex/analytics-events/events"]
+    Biz --> CF["CodexFeedback"]
+    CF --> Sentry["Sentry"]
 ```
 
 远端默认只开 Metrics；Events、Feedback、本地各走一路。
@@ -106,22 +118,28 @@ run_turn / run_tool
 
 **Analytics（默认开）** — 行为事件，`logEvent()` 广撒网：
 
-```
-hooks / tools / api
-    │ logEvent('tengu_xxx')
-    ▼
-analytics/index → sink（采样）→ metadata（enrichment）
-    ├─► Datadog Logs（白名单）
-    └─► POST /api/event_logging/batch → BigQuery
+```mermaid
+flowchart TB
+    Biz["hooks / tools / api"]
+    Biz -->|logEvent| Idx["analytics/index"]
+    Idx --> Sink["sink（采样）"]
+    Sink --> Meta["metadata（enrichment）"]
+    Meta --> DD["Datadog Logs<br/>白名单"]
+    Meta --> BQ["POST /api/event_logging/batch<br/>→ BigQuery"]
 ```
 
 **Telemetry（需 `CLAUDE_CODE_ENABLE_TELEMETRY=1`）** — OTEL metrics / trace / logs：
 
-```
-run_turn / run_tool
-    ├─ OTEL Meter  ──┐
-    ├─ OTEL Span   ──┼─► instrumentation.ts ──► OTLP / BigQuery / beta 端点
-    └─ OTEL Logger ──┘
+```mermaid
+flowchart TB
+    Biz["run_turn / run_tool"]
+    Biz --> Meter["OTEL Meter"]
+    Biz --> Span["OTEL Span<br/>sessionTracing"]
+    Biz --> Logger["OTEL Logger"]
+    Meter --> Inst["instrumentation.ts"]
+    Span --> Inst
+    Logger --> Inst
+    Inst --> Out["OTLP / BigQuery / beta 端点"]
 ```
 
 Trace 走 `sessionTracing`，记 session → turn → llm / tool 的 loop 树。错误另落本地 `~/.claude/errors/*.jsonl`，不上报。
