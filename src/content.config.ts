@@ -11,6 +11,7 @@ const blog = defineCollection({
     updatedDate: z.coerce.date().optional(),
     techDomain: z.array(z.string()).default([]),
     product: z.array(z.string()).default([]),
+    topic: z.array(z.string()).default([]),
     draft: z.boolean().default(false),
   }),
 });

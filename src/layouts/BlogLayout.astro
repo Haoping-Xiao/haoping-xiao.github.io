@@ -12,8 +12,8 @@ interface Props {
 }
 
 const { post } = Astro.props;
-const { title, description, pubDate, updatedDate, techDomain, product } = post.data;
-const hasLabels = techDomain.length > 0 || product.length > 0;
+const { title, description, pubDate, updatedDate, techDomain, product, topic } = post.data;
+const hasLabels = techDomain.length > 0 || product.length > 0 || topic.length > 0;
 const readingTime = getReadingTime(post.body);
 const { Content, headings } = await render(post);
 
@@ -40,6 +40,11 @@ const formattedUpdated = updatedDate?.toLocaleDateString('zh-CN', {
   {
     product.map((item) => (
       <span data-pagefind-filter="product" class="sr-only">{item}</span>
+    ))
+  }
+  {
+    topic.map((item) => (
+      <span data-pagefind-filter="topic" class="sr-only">{item}</span>
     ))
   }
   <div class="article-shell">
@@ -82,6 +87,11 @@ const formattedUpdated = updatedDate?.toLocaleDateString('zh-CN', {
               </span>
             ))}
             {product.map((item) => (
+              <span class="rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-muted)]">
+                {item}
+              </span>
+            ))}
+            {topic.map((item) => (
               <span class="rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-muted)]">
                 {item}
               </span>
