@@ -3,7 +3,7 @@ title: "Claude Design 如何把 AI 生成的代码安全画出来"
 description: "拆解 Claude Design 的 Skill → 生成 → 渲染 → 绘制链路，理解 iframe 沙箱、自定义 DSL 与流式更新的工程取舍。"
 pubDate: 2025-06-17
 techDomain: ["Agent Tool Design"]
-product: ["Claude Design"]
+product: ["Claude"]
 ---
 
 当大模型开始直接产出 HTML、React 组件甚至整份 PPT 时，工程问题立刻变得尖锐：**这些代码要在用户的浏览器里执行，但绝不能碰到主站的 cookie、会话和 DOM。** 同时还要边生成边显示，不能等整份 Artifact 落盘后再刷新。

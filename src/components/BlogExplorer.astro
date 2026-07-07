@@ -42,24 +42,64 @@ const postsData = posts.map((post) => ({
           >
             排序
           </label>
-          <div class="relative">
+          <div class="relative" id="sort-control">
             <select
               id="sort-select"
-              class="w-full appearance-none rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg)] py-2.5 pl-3 pr-9 text-sm text-[var(--color-text)] outline-none transition hover:border-[var(--color-border)] focus:border-[var(--color-border)]"
+              class="sr-only"
+              aria-hidden="true"
+              tabindex="-1"
             >
               <option value="newest">最新发布</option>
               <option value="alphabetical">标题排序</option>
             </select>
-            <svg
-              class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-              aria-hidden="true"
+            <button
+              type="button"
+              id="sort-trigger"
+              class="flex w-full items-center justify-between rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg)] py-2.5 pl-3 pr-3 text-left text-sm text-[var(--color-text)] outline-none transition hover:border-[var(--color-border)] focus:border-[var(--color-accent)]"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-controls="sort-menu"
             >
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
+              <span id="sort-label">最新发布</span>
+              <svg
+                class="h-4 w-4 text-[var(--color-muted)] transition"
+                id="sort-trigger-icon"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div
+              id="sort-menu"
+              class="absolute left-0 top-[calc(100%+0.5rem)] z-20 hidden w-full overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-[0_18px_45px_rgba(20,20,19,0.12)]"
+              role="listbox"
+              aria-labelledby="sort-trigger"
+            >
+              <button
+                type="button"
+                class="sort-option flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm text-[var(--color-text)] transition hover:bg-[var(--color-surface-elevated)]"
+                data-sort-value="newest"
+                role="option"
+                aria-selected="true"
+              >
+                最新发布
+                <span class="sort-option-check text-[var(--color-accent)]">✓</span>
+              </button>
+              <button
+                type="button"
+                class="sort-option flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm text-[var(--color-text)] transition hover:bg-[var(--color-surface-elevated)]"
+                data-sort-value="alphabetical"
+                role="option"
+                aria-selected="false"
+              >
+                标题排序
+                <span class="sort-option-check hidden text-[var(--color-accent)]">✓</span>
+              </button>
+            </div>
           </div>
         </section>
 
@@ -225,6 +265,12 @@ const postsData = posts.map((post) => ({
   const filterToggleLabel = document.getElementById('filter-toggle-label');
   const searchInput = document.getElementById('search-input');
   const sortSelect = document.getElementById('sort-select');
+  const sortControl = document.getElementById('sort-control');
+  const sortTrigger = document.getElementById('sort-trigger');
+  const sortTriggerIcon = document.getElementById('sort-trigger-icon');
+  const sortLabel = document.getElementById('sort-label');
+  const sortMenu = document.getElementById('sort-menu');
+  const sortOptions = Array.from(explorer.querySelectorAll('.sort-option'));
   const postList = document.getElementById('post-list');
   const emptyState = document.getElementById('empty-state');
   const pagination = document.getElementById('pagination');
@@ -257,6 +303,46 @@ const postsData = posts.map((post) => ({
   });
 
   initFiltersVisibility();
+
+  function setSortMenuOpen(open) {
+    sortMenu.classList.toggle('hidden', !open);
+    sortTrigger.setAttribute('aria-expanded', String(open));
+    sortTriggerIcon.classList.toggle('rotate-180', open);
+  }
+
+  function setSortValue(value) {
+    sortSelect.value = value;
+    const selectedOption = sortSelect.options[sortSelect.selectedIndex];
+    sortLabel.textContent = selectedOption?.textContent ?? '最新发布';
+
+    sortOptions.forEach((option) => {
+      const selected = option.dataset.sortValue === value;
+      option.setAttribute('aria-selected', String(selected));
+      option.classList.toggle('bg-[var(--color-surface-elevated)]', selected);
+      option.querySelector('.sort-option-check')?.classList.toggle('hidden', !selected);
+    });
+  }
+
+  sortTrigger.addEventListener('click', () => {
+    setSortMenuOpen(sortMenu.classList.contains('hidden'));
+  });
+
+  sortOptions.forEach((option) => {
+    option.addEventListener('click', () => {
+      setSortValue(option.dataset.sortValue);
+      setSortMenuOpen(false);
+      currentPage = 1;
+      updateView();
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!sortControl.contains(event.target)) setSortMenuOpen(false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setSortMenuOpen(false);
+  });
 
   let currentPage = 1;
   let searchMatchIds = null;
@@ -429,6 +515,7 @@ const postsData = posts.map((post) => ({
     }, 250);
   });
   sortSelect.addEventListener('change', () => {
+    setSortValue(sortSelect.value);
     currentPage = 1;
     updateView();
   });
@@ -439,5 +526,6 @@ const postsData = posts.map((post) => ({
     });
   });
 
+  setSortValue(sortSelect.value);
   updateView();
 </script>

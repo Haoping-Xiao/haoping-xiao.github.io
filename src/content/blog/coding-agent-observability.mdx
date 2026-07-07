@@ -3,7 +3,7 @@ title: "Coding Agent 可观测性：该收什么、怎么分流"
 description: "从 Codex 与 Claude Code 两条真实管线出发，理解 metrics / events / trace（agent loop）/ logs 各管什么，以及为何「埋点一次、导出分流」比堆 SDK 更稳。"
 pubDate: 2026-06-25
 techDomain: ["Agent Infra"]
-product: ["Codex", "Claude Code"]
+product: ["Codex", "Claude"]
 ---
 
 当 coding agent 从「偶尔调 API」变成「常驻终端、改仓库、跑 shell」时，工程问题不再是「能不能打出一条 log」，而是：**同一轮 turn 里，产品要看行为漏斗、SRE 要看 P99 延迟、安全要看敏感链路、用户报 bug 时要能挂上现场——这些信号能不能各走各的路，又不让业务代码变成 if/else 选厂商？**
