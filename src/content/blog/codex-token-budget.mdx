@@ -1,0 +1,96 @@
+---
+title: "Codex 如何实现 Token Budget"
+description: "理解 Codex 里 rollout_budget 和 thread goal token_budget 的区别：一个保护系统资源，一个管理任务进度。"
+pubDate: 2026-07-09
+techDomain: ["Agent Harness"]
+product: ["Codex"]
+---
+
+Agent 能自己读文件、跑工具、继续推进任务之后，token budget 就不只是「最多生成多少字」了。真正的问题是：**一边要防止一次 rollout 无限烧 token，一边又要让长期任务知道自己花了多少、该不该收尾。**
+
+Codex 里正好有两类预算：会话级的 `rollout_budget`，和任务级的 thread goal `token_budget`。它们都在管 token 消耗，但目标完全不同。
+
+## 两类预算，不是一回事
+
+最容易混淆的是：这两个 budget 都叫 budget，也都和 token usage 有关。但它们处在不同层级。
+
+| 预算 | 管什么 | 用途 | 到线后会怎样 |
+|------|--------|------|--------------|
+| `rollout_budget` | 整棵 session tree | 防止主线程和子代理无限消耗 token | 硬失败，返回 `SessionBudgetExceeded` |
+| thread goal `token_budget` | 某个任务 goal | 跟踪任务预算、进度和收尾状态 | 标记 `budget_limited`，提示模型总结收尾 |
+
+一句话：`rollout_budget` 是资源保险丝，thread goal `token_budget` 是任务进度控制器。
+
+## rollout_budget：全局保险丝
+
+`rollout_budget` 作用在一整棵 session tree 上。它不只看主线程，也会覆盖子代理。
+
+每次模型返回 usage 后，Codex 会把两类 token 折算成 shared budget 里的「weighted tokens」：
+
+1. 输出 token；
+2. 未缓存的输入 token。
+
+这些 token 会按权重累加到共享预算里。接近阈值时，系统会往上下文里注入提醒，告诉模型还剩多少 shared session budget。
+
+真正耗尽后，行为就很硬：当前 turn 和后续 turn 会直接失败，返回 `SessionBudgetExceeded`。这不是在劝模型少做一点，而是在保护整个 rollout 不继续消耗资源。
+
+```text
+model usage
+  -> weighted tokens
+  -> shared session budget
+  -> near limit: inject reminder
+  -> exhausted: SessionBudgetExceeded
+```
+
+所以 `rollout_budget` 的核心不是任务体验，而是资源上限。它解决的是「不能让这一棵执行树无限跑下去」。
+
+## thread goal token_budget：任务预算
+
+thread goal 的 `token_budget` 更像一个带状态的任务账本。
+
+用户或系统创建 goal 时，可以给它设置 `token_budget`。这个 goal 会持久化在 SQLite 的 `thread_goals` 表里，字段包括：
+
+- `objective`
+- `status`
+- `token_budget`
+- `tokens_used`
+- `time_used_seconds`
+
+Codex 在 turn 开始时记录 baseline。之后在收到 token usage、工具完成、turn 结束或异常时，把这次增量记到账上。
+
+关键判断很直接：
+
+```text
+tokens_used + token_delta >= token_budget
+```
+
+条件成立时，goal 状态会变成 `budget_limited`。
+
+但这里和 `rollout_budget` 最大的区别是：它不会硬杀当前 turn。Codex 会注入一段内部提示，告诉模型预算到了，不要再开始新的实质工作，尽快总结进展、剩余工作和下一步。
+
+自动续跑也会停下来，因为只有 `Active` goal 才会继续触发 continuation。也就是说，任务不会被粗暴中断，但会被引导进入收尾状态。
+
+## 为什么要分成两层
+
+如果只有 `rollout_budget`，系统能防止资源失控，但任务本身没有可观察的进度状态。用户只能看到「失败了」或「还在跑」。
+
+如果只有 thread goal `token_budget`，任务体验会更温和，但它不适合作为全局资源保护。因为它是 goal 级别的，无法天然覆盖整棵 session tree 里的所有消耗。
+
+两层预算放在一起，分工就很清楚：
+
+| 问题 | 由谁解决 |
+|------|----------|
+| 这次 rollout 会不会无限烧 token？ | `rollout_budget` |
+| 这个长期任务花了多少预算？ | thread goal `token_budget` |
+| 快到资源上限时要不要硬停？ | `rollout_budget` |
+| 任务预算到了，如何优雅收尾？ | thread goal `token_budget` |
+
+前者保护系统，后者帮助任务可观察、可恢复、可收尾。
+
+## 写在最后
+
+理解 Codex 的 token budget，可以只记住这个区别：
+
+**`rollout_budget` 管资源上限，像熔断器；thread goal `token_budget` 管任务预算，像进度控制器。**
+
+一个负责别烧穿系统，一个负责让长期任务有状态地走到结尾。名字相近，但设计目标完全不同。
